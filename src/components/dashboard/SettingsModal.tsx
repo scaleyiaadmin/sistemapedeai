@@ -183,7 +183,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden bg-card p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] bg-card p-0 flex flex-col">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-primary" />
@@ -274,27 +274,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Input
                       type="number"
                       min={1}
-                      max={100}
+                      max={50}
                       value={settings.totalTables}
-                      onChange={(e) => updateSettings({ totalTables: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        const maxTables = 50; // Limite máximo contratado
+                        updateSettings({ totalTables: Math.min(Math.max(1, value), maxTables) });
+                      }}
                       className="w-32 h-10 rounded-lg"
                     />
                     <p className="text-sm text-muted-foreground">
-                      Altere para adicionar ou remover mesas do painel
+                      Máximo contratado: 50 mesas
                     </p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border">
-                    <div>
-                      <Label className="text-foreground font-medium">Fechar Mesa Automaticamente</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Após pagamento confirmado
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.autoCloseTable}
-                      onCheckedChange={(checked) => updateSettings({ autoCloseTable: checked })}
+                  <div className="space-y-2">
+                    <Label>Horário Fechamento Cozinha</Label>
+                    <Input
+                      type="time"
+                      value={settings.kitchenClosingTime || settings.closingTime}
+                      onChange={(e) => updateSettings({ kitchenClosingTime: e.target.value })}
+                      className="w-32 h-10 rounded-lg"
                     />
+                    <p className="text-sm text-warning flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      30min antes, clientes serão avisados
+                    </p>
                   </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border">
+                  <div>
+                    <Label className="text-foreground font-medium">Fechar Mesa Automaticamente</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Após pagamento confirmado
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.autoCloseTable}
+                    onCheckedChange={(checked) => updateSettings({ autoCloseTable: checked })}
+                  />
                 </div>
               </div>
 
