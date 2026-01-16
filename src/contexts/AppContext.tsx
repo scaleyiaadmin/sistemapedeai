@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useRestaurant } from '@/hooks/useRestaurant';
+import { usePedidos } from '@/hooks/usePedidos';
 
 export interface Product {
   id: string;
@@ -107,12 +110,13 @@ interface AppSettings {
 
 interface AppContextType {
   isAuthenticated: boolean;
-  login: (email: string, password: string) => void;
-  register: (restaurantName: string, email: string, password: string) => void;
+  restaurantId: string | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   tables: Table[];
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  saveSettingsToSupabase: () => Promise<void>;
   products: Product[];
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -139,34 +143,10 @@ interface AppContextType {
   clearUndo: () => void;
   filter: 'all' | 'bar' | 'kitchen';
   setFilter: (filter: 'all' | 'bar' | 'kitchen') => void;
+  loadingData: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const initialProducts: Product[] = [
-  { id: '1', name: 'Cerveja Pilsen', price: 12.00, category: 'Bebidas', station: 'bar', stock: 100, isActive: true, minStock: 20, costPrice: 5.00, description: 'Cerveja gelada 600ml' },
-  { id: '2', name: 'Caipirinha', price: 18.00, category: 'Bebidas', station: 'bar', stock: 50, isActive: true, minStock: 10, costPrice: 6.00, description: 'Caipirinha de limão tradicional' },
-  { id: '3', name: 'Água Mineral', price: 5.00, category: 'Bebidas', station: 'bar', stock: 80, isActive: true, minStock: 30, costPrice: 1.50 },
-  { id: '4', name: 'Picanha Grelhada', price: 89.00, category: 'Pratos', station: 'kitchen', stock: 20, isActive: true, minStock: 5, costPrice: 45.00, description: 'Picanha 400g com acompanhamentos' },
-  { id: '5', name: 'Fritas Especiais', price: 28.00, category: 'Porções', station: 'kitchen', stock: 30, isActive: true, minStock: 10, costPrice: 8.00 },
-  { id: '6', name: 'Salada Caesar', price: 35.00, category: 'Saladas', station: 'kitchen', stock: 25, isActive: true, minStock: 8, costPrice: 12.00 },
-];
-
-const initialCustomers: Customer[] = [
-  { id: '1', name: 'João Silva', phone: '(11) 99999-1234', email: 'joao@email.com', visits: 12, lastVisit: new Date('2024-01-10'), totalSpent: 890.00, tags: ['VIP', 'Frequente'], notes: 'Prefere mesa próxima à janela' },
-  { id: '2', name: 'Maria Santos', phone: '(11) 98888-5678', email: 'maria@email.com', visits: 8, lastVisit: new Date('2024-01-12'), totalSpent: 520.00, tags: ['Frequente'], birthday: new Date('1990-05-15') },
-  { id: '3', name: 'Carlos Oliveira', phone: '(11) 97777-9012', visits: 5, lastVisit: new Date('2024-01-08'), totalSpent: 280.00, tags: ['Novo'] },
-];
-
-const initialCampaigns: Campaign[] = [
-  { id: '1', name: 'Promoção Happy Hour', message: 'Aproveite 50% de desconto em drinks das 17h às 19h!', targetTags: ['Frequente'], status: 'sent', sentCount: 45 },
-  { id: '2', name: 'Aniversariantes do Mês', message: 'Parabéns! Ganhe uma sobremesa grátis no seu aniversário!', targetTags: ['VIP'], status: 'scheduled', scheduledDate: new Date('2024-02-01') },
-];
-
-const initialStockMovements: StockMovement[] = [
-  { id: '1', productId: '1', productName: 'Cerveja Pilsen', type: 'in', quantity: 50, reason: 'Reposição de estoque', date: new Date('2024-01-10') },
-  { id: '2', productId: '4', productName: 'Picanha Grelhada', type: 'out', quantity: 5, reason: 'Vendas do dia', date: new Date('2024-01-11') },
-];
 
 const initialPrinters: Printer[] = [
   { id: '1', name: 'Impressora Bar', type: 'bar', ipAddress: '192.168.1.100', isActive: true },
@@ -176,6 +156,9 @@ const initialPrinters: Printer[] = [
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [loadingData, setLoadingData] = useState(false);
+  
   const [settings, setSettings] = useState<AppSettings>({
     totalTables: 12,
     flashingEnabled: true,
@@ -193,18 +176,59 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     whatsappNumber: '',
     printers: initialPrinters,
   });
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>(initialStockMovements);
+
+  // Empty initial states - no mock data
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [filter, setFilter] = useState<'all' | 'bar' | 'kitchen'>('all');
+
+  // Use Supabase hooks
+  const { restaurant, updateRestaurant } = useRestaurant(restaurantId);
+  const { pedidos, dailyMetrics } = usePedidos(restaurantId);
+
+  // Sync restaurant data with settings
+  useEffect(() => {
+    if (restaurant) {
+      setSettings(prev => ({
+        ...prev,
+        restaurantName: restaurant.nome || 'Meu Restaurante',
+        totalTables: parseInt(restaurant.quantidade_mesas || '12', 10),
+        kitchenClosingTime: restaurant.horario_fecha_cozinha || undefined,
+        whatsappNumber: restaurant.telefone || '',
+      }));
+    }
+  }, [restaurant]);
+
+  // Convert pedidos to orders format for compatibility
+  useEffect(() => {
+    const convertedOrders: Order[] = pedidos.map(p => ({
+      id: p.id.toString(),
+      tableId: p.mesa,
+      items: p.itens.map((item, idx) => ({
+        productId: `db-${p.id}-${idx}`,
+        productName: item.nome,
+        quantity: item.quantidade,
+        price: item.preco,
+      })),
+      station: 'kitchen' as const,
+      status: p.status === 'pendente' ? 'pending' as const : 
+              p.status === 'preparando' ? 'preparing' as const :
+              p.status === 'pronto' ? 'ready' as const : 'delivered' as const,
+      printStatus: 'printed' as const,
+      createdAt: p.created_at,
+    }));
+    setOrders(convertedOrders);
+  }, [pedidos]);
 
   const generateTables = useCallback((count: number): Table[] => {
     return Array.from({ length: count }, (_, i) => ({
       id: i + 1,
-      status: Math.random() > 0.6 ? 'occupied' : 'free',
-      alert: Math.random() > 0.85 ? (Math.random() > 0.5 ? 'waiter' : 'bill') : null,
+      status: 'free' as const,
+      alert: null,
       orders: [],
       consumption: [],
     }));
@@ -212,91 +236,75 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [tables, setTables] = useState<Table[]>(() => generateTables(settings.totalTables));
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const sampleOrders: Order[] = [
-      {
-        id: '1',
-        tableId: 3,
-        items: [{ productId: '1', productName: 'Cerveja Pilsen', quantity: 3, price: 12.00 }],
-        station: 'bar',
-        status: 'pending',
-        printStatus: 'printed',
-        createdAt: new Date(),
-      },
-      {
-        id: '2',
-        tableId: 5,
-        items: [
-          { productId: '4', productName: 'Picanha Grelhada', quantity: 2, price: 89.00 },
-          { productId: '5', productName: 'Fritas Especiais', quantity: 1, price: 28.00 },
-        ],
-        station: 'kitchen',
-        status: 'pending',
-        printStatus: 'printed',
-        createdAt: new Date(),
-      },
-      {
-        id: '3',
-        tableId: 7,
-        items: [{ productId: '2', productName: 'Caipirinha', quantity: 2, price: 18.00 }],
-        station: 'bar',
-        status: 'pending',
-        printStatus: 'printed',
-        createdAt: new Date(),
-      },
-      {
-        id: '4',
-        tableId: 2,
-        items: [{ productId: '6', productName: 'Salada Caesar', quantity: 1, price: 35.00 }],
-        station: 'kitchen',
-        status: 'pending',
-        printStatus: 'error',
-        createdAt: new Date(),
-      },
-    ];
-    return sampleOrders;
-  });
+  // Update tables when settings change
+  useEffect(() => {
+    setTables(currentTables => {
+      if (settings.totalTables > currentTables.length) {
+        return [
+          ...currentTables,
+          ...Array.from({ length: settings.totalTables - currentTables.length }, (_, i) => ({
+            id: currentTables.length + i + 1,
+            status: 'free' as const,
+            alert: null,
+            orders: [],
+            consumption: [],
+          })),
+        ];
+      }
+      return currentTables.slice(0, settings.totalTables);
+    });
+  }, [settings.totalTables]);
 
-  const login = useCallback((email: string, password: string) => {
-    if (email && password) {
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoadingData(true);
+      // Query the Restaurantes table to authenticate
+      const { data, error } = await supabase
+        .from('Restaurantes')
+        .select('*')
+        .eq('email', email)
+        .eq('senha', password)
+        .single();
 
-  const register = useCallback((restaurantName: string, email: string, password: string) => {
-    if (restaurantName && email && password) {
-      setSettings(prev => ({ ...prev, restaurantName }));
+      if (error || !data) {
+        console.error('Login failed:', error);
+        setLoadingData(false);
+        return false;
+      }
+
+      setRestaurantId(data.id);
       setIsAuthenticated(true);
+      setLoadingData(false);
+      return true;
+    } catch (err) {
+      console.error('Login error:', err);
+      setLoadingData(false);
+      return false;
     }
   }, []);
 
   const logout = useCallback(() => {
     setIsAuthenticated(false);
+    setRestaurantId(null);
   }, []);
 
   const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
-      if (newSettings.totalTables && newSettings.totalTables !== prev.totalTables) {
-        setTables(currentTables => {
-          if (newSettings.totalTables! > currentTables.length) {
-            return [
-              ...currentTables,
-              ...Array.from({ length: newSettings.totalTables! - currentTables.length }, (_, i) => ({
-                id: currentTables.length + i + 1,
-                status: 'free' as const,
-                alert: null,
-                orders: [],
-                consumption: [],
-              })),
-            ];
-          }
-          return currentTables.slice(0, newSettings.totalTables);
-        });
-      }
       return updated;
     });
   }, []);
+
+  const saveSettingsToSupabase = useCallback(async () => {
+    if (!restaurantId) return;
+
+    await updateRestaurant({
+      nome: settings.restaurantName,
+      quantidade_mesas: settings.totalTables.toString(),
+      horario_fecha_cozinha: settings.kitchenClosingTime || null,
+      telefone: settings.whatsappNumber || null,
+    });
+  }, [restaurantId, settings, updateRestaurant]);
 
   const addProduct = useCallback((product: Omit<Product, 'id'>) => {
     const newProduct = { ...product, id: Date.now().toString() };
@@ -332,7 +340,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setStockMovements(prev => [newMovement, ...prev]);
     
-    // Update product stock
     setProducts(prev => prev.map(p => {
       if (p.id === movement.productId) {
         const stockChange = movement.type === 'in' ? movement.quantity : -movement.quantity;
@@ -362,7 +369,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       items,
       station,
       status: 'pending',
-      printStatus: Math.random() > 0.2 ? 'printed' : 'error',
+      printStatus: 'printed',
       createdAt: new Date(),
     };
     
@@ -372,26 +379,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         ? { ...t, status: 'occupied', orders: [...t.orders, newOrder], consumption: [...t.consumption, ...items] }
         : t
     ));
-
-    // Deduct stock and record movement
-    items.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        setProducts(prev => prev.map(p => 
-          p.id === item.productId ? { ...p, stock: Math.max(0, p.stock - item.quantity) } : p
-        ));
-        setStockMovements(prev => [{
-          id: Date.now().toString() + item.productId,
-          productId: item.productId,
-          productName: item.productName,
-          type: 'out',
-          quantity: item.quantity,
-          reason: `Pedido Mesa ${tableId}`,
-          date: new Date(),
-        }, ...prev]);
-      }
-    });
-  }, [products]);
+  }, []);
 
   const deliverOrder = useCallback((orderId: string) => {
     const order = orders.find(o => o.id === orderId);
@@ -434,6 +422,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const product = products.find(p => p.id === item.productId);
     if (product) {
       addOrder(tableId, [item], product.station);
+    } else {
+      // For manually added items without product reference
+      addOrder(tableId, [item], 'kitchen');
     }
   }, [products, addOrder]);
 
@@ -465,12 +456,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       isAuthenticated,
+      restaurantId,
       login,
-      register,
       logout,
       tables,
       settings,
       updateSettings,
+      saveSettingsToSupabase,
       products,
       addProduct,
       updateProduct,
@@ -497,6 +489,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       clearUndo,
       filter,
       setFilter,
+      loadingData,
     }}>
       {children}
     </AppContext.Provider>
@@ -505,7 +498,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useApp must be used within an AppProvider');
   }
   return context;

@@ -1,73 +1,49 @@
 import { useMemo } from 'react';
 import { 
   TrendingUp, DollarSign, ShoppingBag, Users, 
-  ArrowUpRight, ArrowDownRight, Package
+  ArrowUpRight, ArrowDownRight, Package, Inbox
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import { usePedidos } from '@/hooks/usePedidos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const DashboardHome: React.FC = () => {
-  const { orders, products, tables, customers, stockMovements } = useApp();
+  const { orders, products, tables, customers, stockMovements, restaurantId } = useApp();
+  const { pedidos, dailyMetrics, loading } = usePedidos(restaurantId);
 
-  // Calculate daily sales metrics
+  // Calculate metrics from Supabase data
   const metrics = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Calculate total sales from delivered orders (simulated)
-    const totalSales = orders.reduce((sum, order) => {
-      return sum + order.items.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0);
-    }, 0) + 1250.50; // Add mock previous sales
-
-    // Product sales count
-    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        if (!productSales[item.productId]) {
-          productSales[item.productId] = { name: item.productName, quantity: 0, revenue: 0 };
-        }
-        productSales[item.productId].quantity += item.quantity;
-        productSales[item.productId].revenue += item.price * item.quantity;
-      });
-    });
-
-    // Sort by quantity sold
-    const topProducts = Object.values(productSales)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
-
-    // Add mock products if not enough
-    if (topProducts.length < 5) {
-      const mockProducts = [
-        { name: 'Cerveja Pilsen', quantity: 45, revenue: 540 },
-        { name: 'Picanha Grelhada', quantity: 12, revenue: 1068 },
-        { name: 'Caipirinha', quantity: 28, revenue: 504 },
-        { name: 'Fritas Especiais', quantity: 18, revenue: 504 },
-        { name: 'Água Mineral', quantity: 35, revenue: 175 },
-      ];
-      mockProducts.forEach((mp) => {
-        if (topProducts.length < 5 && !topProducts.find(p => p.name === mp.name)) {
-          topProducts.push(mp);
-        }
-      });
-    }
-
+    const stats = dailyMetrics();
+    
     const occupiedTables = tables.filter(t => t.status === 'occupied').length;
-    const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
     return {
-      totalSales,
-      topProducts: topProducts.slice(0, 5),
+      totalSales: stats.totalSales,
+      topProducts: stats.topProducts,
       occupiedTables,
       totalTables: tables.length,
-      pendingOrders,
+      pendingOrders: stats.pendingOrders,
+      totalOrders: stats.totalOrders,
       totalCustomers: customers.length,
     };
-  }, [orders, tables, customers]);
+  }, [dailyMetrics, tables, customers]);
 
   // Recent stock movements
   const recentMovements = stockMovements.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 overflow-y-auto bg-background">
+        <div className="max-w-7xl mx-auto flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando dados...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-6 overflow-y-auto bg-background">
@@ -94,9 +70,8 @@ const DashboardHome: React.FC = () => {
               <div className="text-2xl font-bold text-foreground">
                 R$ {metrics.totalSales.toFixed(2)}
               </div>
-              <div className="flex items-center gap-1 text-sm text-success mt-1">
-                <ArrowUpRight className="w-4 h-4" />
-                <span>+12.5% vs ontem</span>
+              <div className="text-sm text-muted-foreground mt-1">
+                {metrics.totalOrders} pedidos hoje
               </div>
             </CardContent>
           </Card>
@@ -116,7 +91,7 @@ const DashboardHome: React.FC = () => {
                 {metrics.occupiedTables}/{metrics.totalTables}
               </div>
               <div className="text-sm text-muted-foreground mt-1">
-                {((metrics.occupiedTables / metrics.totalTables) * 100).toFixed(0)}% ocupação
+                {metrics.totalTables > 0 ? ((metrics.occupiedTables / metrics.totalTables) * 100).toFixed(0) : 0}% ocupação
               </div>
             </CardContent>
           </Card>
@@ -155,9 +130,8 @@ const DashboardHome: React.FC = () => {
               <div className="text-2xl font-bold text-foreground">
                 {metrics.totalCustomers}
               </div>
-              <div className="flex items-center gap-1 text-sm text-success mt-1">
-                <ArrowUpRight className="w-4 h-4" />
-                <span>+3 esta semana</span>
+              <div className="text-sm text-muted-foreground mt-1">
+                Cadastrados no sistema
               </div>
             </CardContent>
           </Card>
@@ -174,29 +148,36 @@ const DashboardHome: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {metrics.topProducts.map((product, index) => (
-                  <div key={product.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        index === 0 ? 'bg-primary/20 text-primary' :
-                        index === 1 ? 'bg-info/20 text-info' :
-                        index === 2 ? 'bg-warning/20 text-warning' :
-                        'bg-secondary text-muted-foreground'
-                      }`}>
-                        {index + 1}
+              {metrics.topProducts.length > 0 ? (
+                <div className="space-y-4">
+                  {metrics.topProducts.map((product, index) => (
+                    <div key={product.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                          index === 0 ? 'bg-primary/20 text-primary' :
+                          index === 1 ? 'bg-info/20 text-info' :
+                          index === 2 ? 'bg-warning/20 text-warning' :
+                          'bg-secondary text-muted-foreground'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">{product.quantity} vendidos</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.quantity} vendidos</p>
+                      <div className="text-right">
+                        <p className="font-semibold text-foreground">R$ {product.revenue.toFixed(2)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">R$ {product.revenue.toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Inbox className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhuma venda registrada hoje</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

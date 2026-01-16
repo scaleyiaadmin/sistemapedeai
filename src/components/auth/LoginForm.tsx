@@ -4,15 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from '@/components/Logo';
+import { toast } from 'sonner';
 
 const LoginForm: React.FC = () => {
-  const { login } = useApp();
+  const { login, loadingData } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(email, password);
+    setIsLoading(true);
+    
+    const success = await login(email, password);
+    
+    if (!success) {
+      toast.error('Email ou senha inválidos');
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -42,6 +52,7 @@ const LoginForm: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12 rounded-xl border-border bg-secondary/50 focus:ring-primary"
+                disabled={isLoading}
               />
             </div>
 
@@ -56,14 +67,16 @@ const LoginForm: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-12 rounded-xl border-border bg-secondary/50 focus:ring-primary"
+                disabled={isLoading}
               />
             </div>
 
             <Button 
               type="submit" 
               className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+              disabled={isLoading}
             >
-              Entrar
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
         </div>

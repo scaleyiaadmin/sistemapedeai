@@ -3,7 +3,7 @@ import {
   X, Settings2, Package, Warehouse, Users, CreditCard, Printer, 
   Plus, Search, Edit2, Trash2, Save, MessageSquare, Send, Calendar,
   TrendingUp, TrendingDown, RotateCcw, AlertTriangle, Check, Clock,
-  Phone, Mail, Tag, Gift, Volume2, VolumeX, Wifi, WifiOff
+  Phone, Mail, Tag, Gift, Volume2, VolumeX, Wifi, WifiOff, Loader2
 } from 'lucide-react';
 import { useApp, Product, Customer, Campaign } from '@/contexts/AppContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,12 +25,14 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { 
-    settings, updateSettings, 
+    settings, updateSettings, saveSettingsToSupabase,
     products, addProduct, updateProduct, deleteProduct,
     customers, addCustomer, updateCustomer, deleteCustomer,
     stockMovements, addStockMovement,
     campaigns, addCampaign, updateCampaign, deleteCampaign
   } = useApp();
+  
+  const [isSaving, setIsSaving] = useState(false);
   
   const [activeTab, setActiveTab] = useState('operation');
   const [productSearch, setProductSearch] = useState('');
@@ -181,14 +184,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   const allTags = [...new Set(customers.flatMap(c => c.tags))];
 
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      await saveSettingsToSupabase();
+      toast.success('Configurações salvas com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl h-[85vh] bg-card p-0 flex flex-col overflow-hidden">
         <DialogHeader className="p-6 pb-4 flex-shrink-0 border-b border-border">
-          <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Settings2 className="w-5 h-5 text-primary" />
-            Configurações
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-primary" />
+              Configurações
+            </DialogTitle>
+            <Button 
+              onClick={handleSaveSettings} 
+              disabled={isSaving}
+              className="gap-2"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Salvar
+            </Button>
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
