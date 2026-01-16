@@ -92,6 +92,7 @@ interface AppSettings {
   restaurantName: string;
   openingTime: string;
   closingTime: string;
+  kitchenClosingTime?: string;
   autoCloseTable: boolean;
   soundEnabled: boolean;
   lowStockAlert: number;

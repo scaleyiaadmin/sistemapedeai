@@ -5,11 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from '@/components/Logo';
 
-interface LoginFormProps {
-  onSwitchToRegister: () => void;
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
+const LoginForm: React.FC = () => {
   const { login } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,18 +66,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               Entrar
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              Não tem uma conta?{' '}
-              <button 
-                onClick={onSwitchToRegister}
-                className="text-primary font-semibold hover:underline"
-              >
-                Cadastre-se
-              </button>
-            </p>
-          </div>
         </div>
       </div>
     </div>

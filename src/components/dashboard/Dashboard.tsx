@@ -1,20 +1,30 @@
+import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import Topbar from './Topbar';
+import DashboardHome from './DashboardHome';
 import TableGrid from './TableGrid';
 import OrderQueue from './OrderQueue';
+import ConversationsView from './ConversationsView';
 import UndoToast from './UndoToast';
 
 const Dashboard: React.FC = () => {
-  const { logout } = useApp();
+  const { filter, setFilter } = useApp();
+  const [activeView, setActiveView] = useState<'dashboard' | 'operation' | 'conversations'>('dashboard');
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <Topbar />
+      <Topbar activeView={activeView} onViewChange={setActiveView} />
       
-      <div className="flex-1 flex overflow-hidden">
-        <TableGrid />
-        <OrderQueue />
-      </div>
+      {activeView === 'dashboard' && <DashboardHome />}
+      
+      {activeView === 'operation' && (
+        <div className="flex-1 flex overflow-hidden">
+          <TableGrid />
+          <OrderQueue />
+        </div>
+      )}
+
+      {activeView === 'conversations' && <ConversationsView />}
 
       <UndoToast />
     </div>

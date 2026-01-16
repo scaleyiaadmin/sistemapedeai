@@ -1,59 +1,71 @@
 import { useState } from 'react';
-import { Search, Settings, Wifi, WifiOff } from 'lucide-react';
+import { Search, Settings, Circle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import SettingsModal from './SettingsModal';
 
-const Topbar: React.FC = () => {
-  const { filter, setFilter } = useApp();
+interface TopbarProps {
+  activeView: 'dashboard' | 'operation' | 'conversations';
+  onViewChange: (view: 'dashboard' | 'operation' | 'conversations') => void;
+}
+
+const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
+  const { settings } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [whatsappConnected] = useState(true);
+  const [isOnline] = useState(true);
 
-  const filters: { value: 'all' | 'bar' | 'kitchen'; label: string }[] = [
-    { value: 'all', label: 'Todos' },
-    { value: 'bar', label: 'Bar' },
-    { value: 'kitchen', label: 'Cozinha' },
-  ];
+  const navItems = [
+    { value: 'dashboard', label: 'Dashboard' },
+    { value: 'operation', label: 'Operação' },
+    { value: 'conversations', label: 'Conversas' },
+  ] as const;
 
   return (
     <>
       <header className="h-16 bg-card border-b border-border px-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center">
+        {/* Left: Logo + Restaurant Name */}
+        <div className="flex items-center gap-3">
           <Logo size="sm" />
+          <div className="h-6 w-px bg-border" />
+          <span className="font-semibold text-foreground text-sm">
+            {settings.restaurantName}
+          </span>
         </div>
 
+        {/* Center: Navigation */}
         <div className="flex items-center gap-2">
-          {filters.map((f) => (
+          {navItems.map((item) => (
             <Button
-              key={f.value}
-              variant={filter === f.value ? 'default' : 'secondary'}
+              key={item.value}
+              variant={activeView === item.value ? 'default' : 'secondary'}
               size="sm"
-              onClick={() => setFilter(f.value)}
+              onClick={() => onViewChange(item.value)}
               className={`rounded-full px-4 transition-all ${
-                filter === f.value 
+                activeView === item.value 
                   ? 'bg-primary text-primary-foreground shadow-md' 
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
               }`}
             >
-              {f.label}
+              {item.label}
             </Button>
           ))}
         </div>
 
+        {/* Right: Status, Search, Settings */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            {whatsappConnected ? (
+            {isOnline ? (
               <div className="flex items-center gap-1.5 text-primary text-sm font-medium">
-                <Wifi className="w-4 h-4" />
-                <span className="hidden sm:inline">WhatsApp Conectado</span>
+                <Circle className="w-2.5 h-2.5 fill-current" />
+                <span className="hidden sm:inline">Online</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-destructive text-sm font-medium">
-                <WifiOff className="w-4 h-4" />
-                <span className="hidden sm:inline">Desconectado</span>
+                <Circle className="w-2.5 h-2.5 fill-current" />
+                <span className="hidden sm:inline">Offline</span>
               </div>
             )}
           </div>
