@@ -345,7 +345,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const convertedProducts: Product[] = produtosDb.map(p => ({
       id: p.id.toString(),
       name: p.nome || '',
-      price: parseFloat(p.preco) || 0,
+      price: parseFloat(p.preco || '0') || 0,
       category: 'Geral',
       station: 'bar' as const,
       stock: 0,

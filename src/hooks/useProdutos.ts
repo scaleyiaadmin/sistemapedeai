@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface ProdutoSupabase {
   id: number;
-  restaurante_id: string;
-  nome: string;
-  preco: string;
+  restaurante_id: string | null;
+  nome: string | null;
+  preco: string | null;
   created_at: string;
 }
 
