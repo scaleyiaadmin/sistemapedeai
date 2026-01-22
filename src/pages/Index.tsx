@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppProvider, useApp } from '@/contexts/AppContext';
+import { useApp } from '@/contexts/AppContext';
 import AuthScreen from '@/components/auth/AuthScreen';
 import Dashboard from '@/components/dashboard/Dashboard';
 
@@ -17,12 +17,6 @@ const AppContent: React.FC = () => {
   return isAuthenticated ? <Dashboard /> : <AuthScreen />;
 };
 
-const Index: React.FC = () => {
-  return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
-  );
-};
+const Index: React.FC = () => <AppContent />;
 
 export default Index;
