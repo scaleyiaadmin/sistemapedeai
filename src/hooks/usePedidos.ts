@@ -26,6 +26,17 @@ export interface ParsedPedido {
   created_at: Date;
 }
 
+const parseMesaNumber = (mesa: string | null | undefined): number => {
+  const raw = (mesa ?? '').toString().trim();
+  if (!raw) return 0;
+
+  // Accept formats like "3", "03", "Mesa 3", "mesa: 3", etc.
+  const match = raw.match(/\d+/);
+  if (!match) return 0;
+  const n = Number(match[0]);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const normalizePedidoStatus = (status: string | null | undefined): string => {
   const s = (status ?? 'pendente').toString().trim().toLowerCase();
 
@@ -65,7 +76,7 @@ const parsePedido = (pedido: Pedido): ParsedPedido => {
 
   return {
     id: pedido.id,
-    mesa: parseInt(pedido.mesa || '0', 10),
+    mesa: parseMesaNumber(pedido.mesa),
     itens,
     productName,
     quantity,
