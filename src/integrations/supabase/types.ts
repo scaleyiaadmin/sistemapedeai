@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      Admin_acessos: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: number
-          senha: string | null
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: number
-          senha?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: number
-          senha?: string | null
-        }
-        Relationships: []
-      }
       Pedidos: {
         Row: {
           created_at: string
@@ -85,8 +64,6 @@ export type Database = {
           id: number
           nome: string | null
           preco: string | null
-          "quantidade min_estoque": string | null
-          quantidade_estoque: string | null
           restaurante_id: string | null
         }
         Insert: {
@@ -94,8 +71,6 @@ export type Database = {
           id?: number
           nome?: string | null
           preco?: string | null
-          "quantidade min_estoque"?: string | null
-          quantidade_estoque?: string | null
           restaurante_id?: string | null
         }
         Update: {
@@ -103,8 +78,6 @@ export type Database = {
           id?: number
           nome?: string | null
           preco?: string | null
-          "quantidade min_estoque"?: string | null
-          quantidade_estoque?: string | null
           restaurante_id?: string | null
         }
         Relationships: [
@@ -126,10 +99,8 @@ export type Database = {
           nome: string | null
           quantidade_max_mesas: string | null
           quantidade_mesas: string | null
-          role: string | null
           senha: string | null
           telefone: string | null
-          telefone_dono: string | null
         }
         Insert: {
           created_at?: string
@@ -139,10 +110,8 @@ export type Database = {
           nome?: string | null
           quantidade_max_mesas?: string | null
           quantidade_mesas?: string | null
-          role?: string | null
           senha?: string | null
           telefone?: string | null
-          telefone_dono?: string | null
         }
         Update: {
           created_at?: string
@@ -152,10 +121,8 @@ export type Database = {
           nome?: string | null
           quantidade_max_mesas?: string | null
           quantidade_mesas?: string | null
-          role?: string | null
           senha?: string | null
           telefone?: string | null
-          telefone_dono?: string | null
         }
         Relationships: []
       }

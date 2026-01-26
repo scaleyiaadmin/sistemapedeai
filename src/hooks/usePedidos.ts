@@ -1,0 +1,239 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+export interface Pedido {
+  id: number;
+  mesa: string | null;
+  itens: string | null;
+  quantidade: string | null;
+  Subtotal: string | null;
+  status: string | null;
+  restaurante_id: string | null;
+  descricao?: string | null;
+  created_at: string;
+}
+
+export interface ParsedPedido {
+  id: number;
+  mesa: number;
+  itens: Array<{ nome: string; quantidade: number; preco: number }>;
+  productName: string;
+  quantity: number;
+  total: number;
+  status: string;
+  restaurante_id: string | null;
+  descricao?: string;
+  created_at: Date;
+}
+
+const parseMesaNumber = (mesa: string | null | undefined): number => {
+  const raw = (mesa ?? '').toString().trim();
+  if (!raw) return 0;
+
+  // Accept formats like "3", "03", "Mesa 3", "mesa: 3", etc.
+  const match = raw.match(/\d+/);
+  if (!match) return 0;
+  const n = Number(match[0]);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizePedidoStatus = (status: string | null | undefined): string => {
+  const s = (status ?? 'pendente').toString().trim().toLowerCase();
+
+  // Common variants coming from external integrations / humans
+  if (s === 'pendente' || s === 'pending') return 'pendente';
+  if (s === 'preparando' || s === 'preparacao' || s === 'preparação' || s === 'preparing') return 'preparando';
+  if (s === 'pronto' || s === 'ready') return 'pronto';
+  if (s === 'entregue' || s === 'delivered') return 'entregue';
+
+  // Fallback to the normalized string so UI filters are consistent
+  return s;
+};
+
+const parsePedido = (pedido: Pedido): ParsedPedido => {
+  // Parse the product name from itens
+  const productName = pedido.itens || '';
+  
+  // Parse quantity
+  const quantity = parseInt(pedido.quantidade || '1', 10);
+  
+  // Parse subtotal - remove "R$ " and convert comma to dot
+  let total = 0;
+  if (pedido.Subtotal) {
+    const cleanSubtotal = pedido.Subtotal.replace('R$', '').replace(',', '.').trim();
+    total = parseFloat(cleanSubtotal) || 0;
+  }
+  
+  // Calculate unit price
+  const unitPrice = quantity > 0 ? total / quantity : 0;
+  
+  // Create items array for backward compatibility
+  const itens = productName ? [{
+    nome: productName,
+    quantidade: quantity,
+    preco: unitPrice
+  }] : [];
+
+  return {
+    id: pedido.id,
+    mesa: parseMesaNumber(pedido.mesa),
+    itens,
+    productName,
+    quantity,
+    total,
+    status: normalizePedidoStatus(pedido.status),
+    restaurante_id: pedido.restaurante_id,
+    descricao: (pedido.descricao ?? undefined) || undefined,
+    created_at: new Date(pedido.created_at),
+  };
+};
+
+export const usePedidos = (restaurantId: string | null) => {
+  const [pedidos, setPedidos] = useState<ParsedPedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPedidos = useCallback(async () => {
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('Pedidos')
+        .select('*')
+        .eq('restaurante_id', restaurantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPedidos((data || []).map(parsePedido));
+    } catch (err) {
+      console.error('Error fetching pedidos:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar pedidos');
+    } finally {
+      setLoading(false);
+    }
+  }, [restaurantId]);
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    fetchPedidos();
+
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('pedidos-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'Pedidos',
+          filter: `restaurante_id=eq.${restaurantId}`,
+        },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newPedido = parsePedido(payload.new as Pedido);
+            setPedidos(prev => [newPedido, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedPedido = parsePedido(payload.new as Pedido);
+            setPedidos(prev => 
+              prev.map(p => p.id === updatedPedido.id ? updatedPedido : p)
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as Pedido).id;
+            setPedidos(prev => prev.filter(p => p.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [restaurantId, fetchPedidos]);
+
+  const updatePedidoStatus = useCallback(async (pedidoId: number, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('Pedidos')
+        .update({ status })
+        .eq('id', pedidoId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      console.error('Error updating pedido:', err);
+      return { error: err instanceof Error ? err.message : 'Erro ao atualizar pedido' };
+    }
+  }, []);
+
+  const deletePedido = useCallback(async (pedidoId: number) => {
+    try {
+      const { error } = await supabase
+        .from('Pedidos')
+        .delete()
+        .eq('id', pedidoId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (err) {
+      console.error('Error deleting pedido:', err);
+      return { error: err instanceof Error ? err.message : 'Erro ao excluir pedido' };
+    }
+  }, []);
+
+  // Calculate daily metrics
+  const dailyMetrics = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todaysPedidos = pedidos.filter(p => {
+      const pedidoDate = new Date(p.created_at);
+      pedidoDate.setHours(0, 0, 0, 0);
+      return pedidoDate.getTime() === today.getTime();
+    });
+
+    const totalSales = todaysPedidos.reduce((sum, p) => sum + p.total, 0);
+    const pendingOrders = pedidos.filter(p => p.status === 'pendente').length;
+
+    // Product sales count
+    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    todaysPedidos.forEach(pedido => {
+      pedido.itens.forEach(item => {
+        const key = item.nome;
+        if (!productSales[key]) {
+          productSales[key] = { name: item.nome, quantity: 0, revenue: 0 };
+        }
+        productSales[key].quantity += item.quantidade;
+        productSales[key].revenue += item.preco * item.quantidade;
+      });
+    });
+
+    const topProducts = Object.values(productSales)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    return {
+      totalSales,
+      pendingOrders,
+      topProducts,
+      totalOrders: todaysPedidos.length,
+    };
+  }, [pedidos]);
+
+  return {
+    pedidos,
+    loading,
+    error,
+    updatePedidoStatus,
+    deletePedido,
+    refetch: fetchPedidos,
+    dailyMetrics,
+  };
+};
