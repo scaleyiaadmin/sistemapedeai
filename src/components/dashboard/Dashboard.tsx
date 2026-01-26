@@ -14,15 +14,15 @@ const Dashboard: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <Topbar activeView={activeView} onViewChange={setActiveView} />
-      
+
       {activeView === 'dashboard' && <DashboardHome />}
-      
+
       {activeView === 'operation' && (
-        <div className="flex-1 flex overflow-hidden w-full">
+        <div className="flex-1 flex overflow-hidden w-full bg-white">
           <div className="flex-1 min-w-0">
             <TableGrid />
           </div>
-          <div className="w-80 flex-shrink-0 lg:w-96">
+          <div className="w-80 flex-shrink-0 lg:w-96 border-l border-border/50 bg-secondary/5">
             <OrderQueue />
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { 
-  TrendingUp, DollarSign, ShoppingBag, Users, 
+import {
+  TrendingUp, DollarSign, ShoppingBag, Users,
   ArrowUpRight, ArrowDownRight, Package, Inbox
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
@@ -15,7 +15,7 @@ const DashboardHome: React.FC = () => {
   // Calculate metrics from Supabase data
   const metrics = useMemo(() => {
     const stats = dailyMetrics();
-    
+
     const occupiedTables = tables.filter(t => t.status === 'occupied').length;
 
     return {
@@ -46,8 +46,8 @@ const DashboardHome: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto bg-background">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex-1 p-8 overflow-y-auto bg-background animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -153,12 +153,11 @@ const DashboardHome: React.FC = () => {
                   {metrics.topProducts.map((product, index) => (
                     <div key={product.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          index === 0 ? 'bg-primary/20 text-primary' :
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${index === 0 ? 'bg-primary/20 text-primary' :
                           index === 1 ? 'bg-info/20 text-info' :
-                          index === 2 ? 'bg-warning/20 text-warning' :
-                          'bg-secondary text-muted-foreground'
-                        }`}>
+                            index === 2 ? 'bg-warning/20 text-warning' :
+                              'bg-secondary text-muted-foreground'
+                          }`}>
                           {index + 1}
                         </div>
                         <div>
@@ -195,9 +194,8 @@ const DashboardHome: React.FC = () => {
                   recentMovements.map((movement) => (
                     <div key={movement.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          movement.type === 'in' ? 'bg-success/20' : 'bg-destructive/20'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${movement.type === 'in' ? 'bg-success/20' : 'bg-destructive/20'
+                          }`}>
                           {movement.type === 'in' ? (
                             <ArrowUpRight className="w-4 h-4 text-success" />
                           ) : (

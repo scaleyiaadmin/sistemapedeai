@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Settings, Circle } from 'lucide-react';
+import { Search, Settings, Circle, LogOut } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,11 @@ interface TopbarProps {
 }
 
 const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
-  const { settings } = useApp();
+  const { settings, logout } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isOnline] = useState(true);
-  
+
   // Password protection state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<'dashboard' | 'conversations' | 'operation' | 'settings' | null>(null);
@@ -31,14 +31,14 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
 
   const handleNavClick = (value: 'dashboard' | 'operation' | 'conversations') => {
     const item = navItems.find(i => i.value === value);
-    
+
     // If it's a protected area and not unlocked, ask for password
     if (item?.protected && !unlockedAreas.has(value)) {
       setPendingAction(value);
       setIsPasswordModalOpen(true);
       return;
     }
-    
+
     onViewChange(value);
   };
 
@@ -55,7 +55,7 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
     if (pendingAction) {
       // Mark the area as unlocked
       setUnlockedAreas(prev => new Set([...prev, pendingAction]));
-      
+
       if (pendingAction === 'settings') {
         setIsSettingsOpen(true);
       } else {
@@ -93,7 +93,7 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
 
   return (
     <>
-      <header className="h-16 bg-card border-b border-border px-4 flex items-center justify-between shadow-sm">
+      <header className="h-16 bg-card border-b border-border shadow-sm px-6 flex items-center justify-between">
         {/* Left: Logo + Restaurant Name */}
         <div className="flex items-center gap-3">
           <Logo size="sm" />
@@ -111,11 +111,10 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
               variant={activeView === item.value ? 'default' : 'secondary'}
               size="sm"
               onClick={() => handleNavClick(item.value)}
-              className={`rounded-full px-4 transition-all ${
-                activeView === item.value 
-                  ? 'bg-primary text-primary-foreground shadow-md' 
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}
+              className={`rounded-full px-4 transition-all ${activeView === item.value
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                }`}
             >
               {item.label}
             </Button>
@@ -124,16 +123,16 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
 
         {/* Right: Status, Search, Settings */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {isOnline ? (
               <div className="flex items-center gap-1.5 text-primary text-sm font-medium">
                 <Circle className="w-2.5 h-2.5 fill-current" />
-                <span className="hidden sm:inline">Online</span>
+                <span className="hidden sm:inline text-xs font-bold uppercase tracking-wider">Online</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-destructive text-sm font-medium">
                 <Circle className="w-2.5 h-2.5 fill-current" />
-                <span className="hidden sm:inline">Offline</span>
+                <span className="hidden sm:inline text-xs font-bold uppercase tracking-wider">Offline</span>
               </div>
             )}
           </div>
@@ -144,7 +143,7 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
               placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-48 h-9 rounded-full bg-secondary border-none"
+              className="pl-9 w-40 h-9 rounded-full bg-secondary border-none text-xs"
             />
           </div>
 
@@ -152,16 +151,26 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
             variant="ghost"
             size="icon"
             onClick={handleSettingsClick}
-            className="rounded-full hover:bg-secondary"
+            className="rounded-full hover:bg-secondary w-9 h-9"
           >
-            <Settings className="w-5 h-5 text-foreground" />
+            <Settings className="w-4 h-4 text-foreground" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={logout}
+            className="rounded-full w-9 h-9 hover:bg-destructive/10 hover:text-destructive group"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           </Button>
         </div>
       </header>
 
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
 
       <PasswordModal

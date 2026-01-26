@@ -119,9 +119,12 @@ interface AuthResult {
 
 interface AppContextType {
   isAuthenticated: boolean;
+  isAdminAuthenticated: boolean;
   restaurantId: string | null;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
+  adminLogin: (email: string, password: string) => Promise<AuthResult>;
+  adminLogout: () => void;
   tables: Table[];
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
@@ -168,10 +171,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Check localStorage for existing session
     return localStorage.getItem('pedeai_restaurant_id');
   });
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('pedeai_admin_auth') === 'true';
+  });
   const [loadingData, setLoadingData] = useState(true);
-  
+
   const isAuthenticated = !!restaurantId;
-  
+
   const [settings, setSettings] = useState<AppSettings>({
     totalTables: 12,
     flashingEnabled: true,
@@ -202,11 +208,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Use Supabase hooks
   const { restaurant, updateRestaurant } = useRestaurant(restaurantId);
   const { pedidos, dailyMetrics } = usePedidos(restaurantId);
-  const { 
-    produtos: produtosDb, 
-    addProduto, 
-    updateProduto, 
-    deleteProduto 
+  const {
+    produtos: produtosDb,
+    addProduto,
+    updateProduto,
+    deleteProduto
   } = useProdutos(restaurantId);
 
   // Check for existing session on mount
@@ -214,6 +220,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const storedId = localStorage.getItem('pedeai_restaurant_id');
     if (storedId) {
       setRestaurantId(storedId);
+    }
+    const adminAuth = localStorage.getItem('pedeai_admin_auth');
+    if (adminAuth === 'true') {
+      setIsAdminAuthenticated(true);
     }
     setLoadingData(false);
   }, []);
@@ -244,9 +254,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         description: p.descricao,
       })),
       station: 'kitchen' as const,
-      status: p.status === 'pendente' ? 'pending' as const : 
-              p.status === 'preparando' ? 'preparing' as const :
-              p.status === 'pronto' ? 'ready' as const : 'delivered' as const,
+      status: p.status === 'pendente' ? 'pending' as const :
+        p.status === 'preparando' ? 'preparing' as const :
+          p.status === 'pronto' ? 'ready' as const : 'delivered' as const,
       printStatus: 'printed' as const,
       createdAt: p.created_at,
     }));
@@ -356,6 +366,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setRestaurantId(null);
   }, []);
 
+  const adminLogin = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    // Para simplificar, hardcoded admin, mas estruturado para expansão
+    // Em um sistema real, isso verificaria uma tabela de admins ou usaria Supabase Auth roles
+    if (email === 'admin@pedeai.com' && password === 'admin123') {
+      localStorage.setItem('pedeai_admin_auth', 'true');
+      setIsAdminAuthenticated(true);
+      return { success: true };
+    }
+    return { success: false, error: 'Credenciais de administrador inválidas' };
+  }, []);
+
+  const adminLogout = useCallback(() => {
+    localStorage.removeItem('pedeai_admin_auth');
+    setIsAdminAuthenticated(false);
+  }, []);
+
   const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
@@ -445,7 +471,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       date: new Date(),
     };
     setStockMovements(prev => [newMovement, ...prev]);
-    
+
     setProducts(prev => prev.map(p => {
       if (p.id === movement.productId) {
         const stockChange = movement.type === 'in' ? movement.quantity : -movement.quantity;
@@ -484,13 +510,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // Calculate subtotal
       const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      
+
       // Get product names (comma separated if multiple)
       const productNames = items.map(item => item.productName).join(', ');
-      
+
       // Get total quantity
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-      
+
       // Format subtotal as R$ X,XX
       const formattedSubtotal = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
 
@@ -515,8 +541,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Update table status locally after successful insert
-      setTables(prev => prev.map(t => 
-        t.id === tableId 
+      setTables(prev => prev.map(t =>
+        t.id === tableId
           ? { ...t, status: 'occupied', consumption: [...t.consumption, ...items] }
           : t
       ));
@@ -536,7 +562,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [orders]);
 
   const reprintOrder = useCallback((orderId: string) => {
-    setOrders(prev => prev.map(o => 
+    setOrders(prev => prev.map(o =>
       o.id === orderId ? { ...o, printStatus: 'printed' } : o
     ));
   }, []);
@@ -546,7 +572,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (table && table.alert && alert === null) {
       setUndoAction({ type: 'resolve_alert', data: { tableId, previousAlert: table.alert }, timestamp: Date.now() });
     }
-    setTables(prev => prev.map(t => 
+    setTables(prev => prev.map(t =>
       t.id === tableId ? { ...t, alert } : t
     ));
   }, [tables]);
@@ -555,8 +581,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const table = tables.find(t => t.id === tableId);
     if (table) {
       setUndoAction({ type: 'close_table', data: table, timestamp: Date.now() });
-      setTables(prev => prev.map(t => 
-        t.id === tableId 
+      setTables(prev => prev.map(t =>
+        t.id === tableId
           ? { ...t, status: 'free', alert: null, orders: [], consumption: [] }
           : t
       ));
@@ -585,18 +611,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const performUndo = useCallback(() => {
     if (!undoAction) return;
-    
+
     switch (undoAction.type) {
       case 'deliver_order':
         setOrders(prev => [...prev, undoAction.data]);
         break;
       case 'close_table':
-        setTables(prev => prev.map(t => 
+        setTables(prev => prev.map(t =>
           t.id === undoAction.data.id ? undoAction.data : t
         ));
         break;
       case 'resolve_alert':
-        setTables(prev => prev.map(t => 
+        setTables(prev => prev.map(t =>
           t.id === undoAction.data.tableId ? { ...t, alert: undoAction.data.previousAlert } : t
         ));
         break;
@@ -611,9 +637,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       isAuthenticated,
+      isAdminAuthenticated,
       restaurantId,
       login,
       logout,
+      adminLogin,
+      adminLogout,
       tables,
       settings,
       updateSettings,
