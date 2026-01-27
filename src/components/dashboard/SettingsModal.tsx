@@ -566,56 +566,95 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       }`}
                   >
                     {editingProduct === product.id ? (
-                      <div className="flex-1 grid grid-cols-6 gap-3 items-center">
-                        <Input
-                          value={editingProductData?.name ?? product.name}
-                          onChange={(e) => setEditingProductData({ ...editingProductData, name: e.target.value })}
-                          className="rounded-lg"
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editingProductData?.price ?? product.price}
-                          onChange={(e) => setEditingProductData({ ...editingProductData, price: parseFloat(e.target.value) || 0 })}
-                          className="rounded-lg"
-                        />
-                        <Select
-                          value={editingProductData?.category ?? product.category}
-                          onValueChange={(v) => setEditingProductData({ ...editingProductData, category: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PRODUCT_CATEGORIES.map((cat) => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={editingProductData?.station ?? product.station}
-                          onValueChange={(v) => setEditingProductData({ ...editingProductData, station: v as 'bar' | 'kitchen' })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="bar">Bar</SelectItem>
-                            <SelectItem value="kitchen">Cozinha</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number"
-                          value={editingProductData?.stock ?? product.stock}
-                          onChange={(e) => setEditingProductData({ ...editingProductData, stock: parseInt(e.target.value) || 0 })}
-                          className="rounded-lg"
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleUpdateProductClick(product.id)} className="gap-1">
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setEditingProduct(null); setEditingProductData(null); }} className="gap-1">
+                      <div className="flex-1 bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-4 my-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-foreground">Editar Produto: {product.name}</h3>
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(null); setEditingProductData(null); }}>
                             <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Nome *</Label>
+                            <Input
+                              value={editingProductData?.name ?? product.name}
+                              onChange={(e) => setEditingProductData({ ...editingProductData, name: e.target.value })}
+                              className="rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Preço *</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editingProductData?.price ?? product.price}
+                              onChange={(e) => setEditingProductData({ ...editingProductData, price: parseFloat(e.target.value) || 0 })}
+                              className="rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Categoria</Label>
+                            <Select
+                              value={editingProductData?.category ?? product.category}
+                              onValueChange={(v) => setEditingProductData({ ...editingProductData, category: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PRODUCT_CATEGORIES.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Estação</Label>
+                            <Select
+                              value={editingProductData?.station ?? product.station}
+                              onValueChange={(v) => setEditingProductData({ ...editingProductData, station: v as 'bar' | 'kitchen' })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="bar">Bar</SelectItem>
+                                <SelectItem value="kitchen">Cozinha</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Estoque</Label>
+                            <Input
+                              type="number"
+                              value={editingProductData?.stock ?? product.stock}
+                              onChange={(e) => setEditingProductData({ ...editingProductData, stock: parseInt(e.target.value) || 0 })}
+                              className="rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Estoque Mínimo</Label>
+                            <Input
+                              type="number"
+                              value={editingProductData?.minStock ?? product.minStock}
+                              onChange={(e) => setEditingProductData({ ...editingProductData, minStock: parseInt(e.target.value) || 0 })}
+                              className="rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2 col-span-3">
+                            <Label>Descrição</Label>
+                            <Input
+                              value={editingProductData?.description ?? product.description}
+                              onChange={(e) => setEditingProductData({ ...editingProductData, description: e.target.value })}
+                              className="rounded-lg"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => { setEditingProduct(null); setEditingProductData(null); }}>Cancelar</Button>
+                          <Button onClick={() => handleUpdateProductClick(product.id)} className="gap-2">
+                            <Check className="w-4 h-4" />
+                            Confirmar Alterações
                           </Button>
                         </div>
                       </div>
@@ -655,7 +694,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             checked={product.isActive}
                             onCheckedChange={(checked) => updateProduct(product.id, { isActive: checked })}
                           />
-                          <Button variant="ghost" size="icon" onClick={() => setEditingProduct(product.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            setEditingProduct(product.id);
+                            setEditingProductData({ ...product });
+                          }}>
                             <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteProduct(product.id)} className="text-destructive hover:text-destructive">

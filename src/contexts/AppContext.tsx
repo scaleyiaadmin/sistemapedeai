@@ -408,13 +408,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: p.id.toString(),
       name: p.nome || '',
       price: parseFloat(p.preco || '0') || 0,
-      category: 'Geral',
-      station: 'bar' as const,
-      stock: 0,
-      isActive: true,
-      minStock: 10,
-      costPrice: 0,
-      description: '',
+      category: p.categoria || 'Geral',
+      station: (p.estacao as 'bar' | 'kitchen') || 'bar',
+      stock: p.estoque || 0,
+      isActive: p.ativo ?? true,
+      minStock: p.estoque_minimo || 10,
+      description: p.descricao || '',
     }));
     setProducts(convertedProducts);
   }, [produtosDb]);
@@ -423,6 +422,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const success = await addProduto({
       nome: product.name,
       preco: product.price,
+      categoria: product.category,
+      estacao: product.station,
+      estoque: product.stock,
+      estoque_minimo: product.minStock,
+      descricao: product.description,
+      ativo: product.isActive,
     });
     if (success) {
       toast.success('Produto adicionado com sucesso!');
@@ -432,9 +437,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [addProduto]);
 
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
-    const updateData: { nome?: string; preco?: number } = {};
+    const updateData: any = {};
     if (updates.name !== undefined) updateData.nome = updates.name;
     if (updates.price !== undefined) updateData.preco = updates.price;
+    if (updates.category !== undefined) updateData.categoria = updates.category;
+    if (updates.station !== undefined) updateData.estacao = updates.station;
+    if (updates.stock !== undefined) updateData.estoque = updates.stock;
+    if (updates.minStock !== undefined) updateData.estoque_minimo = updates.minStock;
+    if (updates.description !== undefined) updateData.descricao = updates.description;
+    if (updates.isActive !== undefined) updateData.ativo = updates.isActive;
 
     const success = await updateProduto(parseInt(id), updateData);
     if (success) {

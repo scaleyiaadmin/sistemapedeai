@@ -6,12 +6,24 @@ export interface ProdutoSupabase {
   restaurante_id: string | null;
   nome: string | null;
   preco: string | null;
+  categoria: string | null;
+  estacao: string | null;
+  estoque: number | null;
+  estoque_minimo: number | null;
+  descricao: string | null;
+  ativo: boolean | null;
   created_at: string;
 }
 
 export interface ProdutoInput {
   nome: string;
   preco: number;
+  categoria?: string;
+  estacao?: string;
+  estoque?: number;
+  estoque_minimo?: number;
+  descricao?: string;
+  ativo?: boolean;
 }
 
 export const useProdutos = (restaurantId: string | null) => {
@@ -21,7 +33,7 @@ export const useProdutos = (restaurantId: string | null) => {
   // Fetch products from Supabase
   const fetchProdutos = useCallback(async () => {
     if (!restaurantId) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -54,6 +66,12 @@ export const useProdutos = (restaurantId: string | null) => {
           restaurante_id: restaurantId,
           nome: produto.nome,
           preco: produto.preco.toString(),
+          categoria: produto.categoria || 'Geral',
+          estacao: produto.estacao || 'bar',
+          estoque: produto.estoque || 0,
+          estoque_minimo: produto.estoque_minimo || 10,
+          descricao: produto.descricao || '',
+          ativo: produto.ativo ?? true,
         });
 
       if (error) {
@@ -74,9 +92,15 @@ export const useProdutos = (restaurantId: string | null) => {
     if (!restaurantId) return false;
 
     try {
-      const updateData: { nome?: string; preco?: string } = {};
+      const updateData: any = {};
       if (updates.nome !== undefined) updateData.nome = updates.nome;
       if (updates.preco !== undefined) updateData.preco = updates.preco.toString();
+      if (updates.categoria !== undefined) updateData.categoria = updates.categoria;
+      if (updates.estacao !== undefined) updateData.estacao = updates.estacao;
+      if (updates.estoque !== undefined) updateData.estoque = updates.estoque;
+      if (updates.estoque_minimo !== undefined) updateData.estoque_minimo = updates.estoque_minimo;
+      if (updates.descricao !== undefined) updateData.descricao = updates.descricao;
+      if (updates.ativo !== undefined) updateData.ativo = updates.ativo;
 
       const { error } = await supabase
         .from('Produtos')
