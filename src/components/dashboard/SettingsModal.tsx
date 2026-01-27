@@ -34,14 +34,13 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const {
-    settings, updateSettings, saveSettingsToSupabase,
+    settings, updateSettings,
     products, addProduct, updateProduct, deleteProduct,
     customers, addCustomer, updateCustomer, deleteCustomer,
     stockMovements, addStockMovement,
     campaigns, addCampaign, updateCampaign, deleteCampaign
   } = useApp();
 
-  const [isSaving, setIsSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState('operation');
   const [productSearch, setProductSearch] = useState('');
@@ -202,17 +201,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   const allTags = [...new Set(customers.flatMap(c => c.tags))];
 
-  const handleSaveSettings = async () => {
-    setIsSaving(true);
-    try {
-      await saveSettingsToSupabase();
-      toast.success('Configurações salvas com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao salvar configurações');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -223,18 +211,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <Settings2 className="w-5 h-5 text-primary" />
               Configurações
             </DialogTitle>
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Salvar
-            </Button>
           </div>
         </DialogHeader>
 
@@ -585,8 +561,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   <div
                     key={product.id}
                     className={`flex items-center justify-between p-4 rounded-xl border transition-all ${product.isActive
-                        ? 'bg-card border-border'
-                        : 'bg-muted/50 border-muted opacity-60'
+                      ? 'bg-card border-border'
+                      : 'bg-muted/50 border-muted opacity-60'
                       }`}
                   >
                     {editingProduct === product.id ? (
@@ -665,10 +641,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             {product.station === 'bar' ? '🍺 Bar' : '🍽️ Cozinha'}
                           </Badge>
                           <div className={`text-center min-w-[60px] px-2 py-1 rounded-lg ${product.stock <= settings.criticalStockAlert
-                              ? 'bg-destructive/20 text-destructive'
-                              : product.stock <= (product.minStock || settings.lowStockAlert)
-                                ? 'bg-warning/20 text-warning'
-                                : 'bg-success/20 text-success'
+                            ? 'bg-destructive/20 text-destructive'
+                            : product.stock <= (product.minStock || settings.lowStockAlert)
+                              ? 'bg-warning/20 text-warning'
+                              : 'bg-success/20 text-success'
                             }`}>
                             <p className="font-bold">{product.stock}</p>
                             <p className="text-xs">un.</p>
@@ -748,10 +724,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <div
                       key={product.id}
                       className={`p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${product.stock <= settings.criticalStockAlert
-                          ? 'border-destructive bg-destructive/10'
-                          : product.stock <= (product.minStock || settings.lowStockAlert)
-                            ? 'border-warning bg-warning/10'
-                            : 'border-success bg-success/10'
+                        ? 'border-destructive bg-destructive/10'
+                        : product.stock <= (product.minStock || settings.lowStockAlert)
+                          ? 'border-warning bg-warning/10'
+                          : 'border-success bg-success/10'
                         }`}
                       onClick={() => setShowStockAdjust(showStockAdjust === product.id ? null : product.id)}
                     >

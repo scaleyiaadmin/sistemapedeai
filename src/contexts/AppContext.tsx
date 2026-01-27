@@ -128,7 +128,6 @@ interface AppContextType {
   tables: Table[];
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
-  saveSettingsToSupabase: () => Promise<void>;
   products: Product[];
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
@@ -387,18 +386,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const updated = { ...prev, ...newSettings };
       return updated;
     });
-  }, []);
 
-  const saveSettingsToSupabase = useCallback(async () => {
-    if (!restaurantId) return;
+    // Auto-save to Supabase
+    if (restaurantId) {
+      const updates: any = {};
+      if (newSettings.restaurantName !== undefined) updates.nome = newSettings.restaurantName;
+      if (newSettings.totalTables !== undefined) updates.quantidade_mesas = newSettings.totalTables.toString();
+      if (newSettings.kitchenClosingTime !== undefined) updates.horario_fecha_cozinha = newSettings.kitchenClosingTime || null;
+      if (newSettings.whatsappNumber !== undefined) updates.telefone = newSettings.whatsappNumber || null;
 
-    await updateRestaurant({
-      nome: settings.restaurantName,
-      quantidade_mesas: settings.totalTables.toString(),
-      horario_fecha_cozinha: settings.kitchenClosingTime || null,
-      telefone: settings.whatsappNumber || null,
-    });
-  }, [restaurantId, settings, updateRestaurant]);
+      if (Object.keys(updates).length > 0) {
+        updateRestaurant(updates);
+      }
+    }
+  }, [restaurantId, updateRestaurant]);
+
 
   // Sync products from Supabase
   useEffect(() => {
@@ -646,7 +648,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       tables,
       settings,
       updateSettings,
-      saveSettingsToSupabase,
       products,
       addProduct,
       updateProduct,
