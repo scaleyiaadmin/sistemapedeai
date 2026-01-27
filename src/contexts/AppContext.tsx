@@ -129,8 +129,8 @@ interface AppContextType {
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
   products: Product[];
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
-  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<void>;
   orders: Order[];
   addOrder: (tableId: number, items: OrderItem[], station: 'bar' | 'kitchen') => Promise<void>;
@@ -431,8 +431,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
     if (success) {
       toast.success('Produto adicionado com sucesso!');
+      return true;
     } else {
       toast.error('Erro ao adicionar produto');
+      return false;
     }
   }, [addProduto]);
 
@@ -450,17 +452,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const success = await updateProduto(parseInt(id), updateData);
     if (success) {
       toast.success('Produto atualizado!');
+      return true;
     } else {
       toast.error('Erro ao atualizar produto');
+      return false;
     }
   }, [updateProduto]);
 
   const deleteProduct = useCallback(async (id: string) => {
-    const success = await deleteProduto(parseInt(id));
-    if (success) {
-      toast.success('Produto removido!');
-    } else {
-      toast.error('Erro ao remover produto');
+    try {
+      const success = await deleteProduto(parseInt(id));
+      if (success) {
+        toast.success('Produto removido!');
+      } else {
+        toast.error('Não foi possível excluir o produto. Verifique sua conexão.');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Erro ao excluir produto.');
     }
   }, [deleteProduto]);
 
@@ -477,22 +486,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCustomers(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  const addStockMovement = useCallback((movement: Omit<StockMovement, 'id' | 'date'>) => {
-    const newMovement: StockMovement = {
-      ...movement,
-      id: Date.now().toString(),
-      date: new Date(),
-    };
-    setStockMovements(prev => [newMovement, ...prev]);
+  const addStockMovement = useCallback(async (movement: Omit<StockMovement, 'id' | 'date'>) => {
+    const product = products.find(p => p.id === movement.productId);
+    if (!product) {
+      toast.error('Produto não encontrado');
+      return;
+    }
 
-    setProducts(prev => prev.map(p => {
-      if (p.id === movement.productId) {
-        const stockChange = movement.type === 'in' ? movement.quantity : -movement.quantity;
-        return { ...p, stock: Math.max(0, p.stock + stockChange) };
+    const stockChange = movement.type === 'in' ? movement.quantity : -movement.quantity;
+    const newStock = Math.max(0, product.stock + stockChange);
+
+    try {
+      const success = await updateProduct(movement.productId, { stock: newStock });
+      if (success !== undefined) { // updateProduct doesn't return anything but let's assume it works if no error
+        const newMovement: StockMovement = {
+          ...movement,
+          id: Date.now().toString(),
+          date: new Date(),
+        };
+        setStockMovements(prev => [newMovement, ...prev]);
+        toast.success(`Estoque atualizado: ${movement.type === 'in' ? '+' : '-'}${movement.quantity}`);
       }
-      return p;
-    }));
-  }, []);
+    } catch (error) {
+      toast.error('Erro ao atualizar estoque no banco de dados');
+    }
+  }, [products, updateProduct]);
 
   const addCampaign = useCallback((campaign: Omit<Campaign, 'id'>) => {
     const newCampaign = { ...campaign, id: Date.now().toString() };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface ProdutoSupabase {
   id: number;
@@ -47,7 +48,7 @@ export const useProdutos = (restaurantId: string | null) => {
         return;
       }
 
-      setProdutos(data || []);
+      setProdutos((data || []) as ProdutoSupabase[]);
     } catch (err) {
       console.error('Failed to fetch products:', err);
     } finally {
@@ -60,6 +61,12 @@ export const useProdutos = (restaurantId: string | null) => {
     if (!restaurantId) return false;
 
     try {
+      console.log('Adding product with data:', {
+        restaurante_id: restaurantId,
+        nome: produto.nome,
+        preco: produto.preco.toString(),
+      });
+
       const { error } = await supabase
         .from('Produtos')
         .insert({
@@ -75,7 +82,8 @@ export const useProdutos = (restaurantId: string | null) => {
         });
 
       if (error) {
-        console.error('Error adding product:', error);
+        console.error('Supabase Error adding product:', error);
+        toast.error(`Erro do Banco: ${error.message}`);
         return false;
       }
 
@@ -102,6 +110,8 @@ export const useProdutos = (restaurantId: string | null) => {
       if (updates.descricao !== undefined) updateData.descricao = updates.descricao;
       if (updates.ativo !== undefined) updateData.ativo = updates.ativo;
 
+      console.log('Updating product:', id, 'with data:', updateData);
+
       const { error } = await supabase
         .from('Produtos')
         .update(updateData)
@@ -109,7 +119,8 @@ export const useProdutos = (restaurantId: string | null) => {
         .eq('restaurante_id', restaurantId);
 
       if (error) {
-        console.error('Error updating product:', error);
+        console.error('Supabase Error updating product:', error);
+        toast.error(`Erro do Banco: ${error.message}`);
         return false;
       }
 
@@ -126,6 +137,7 @@ export const useProdutos = (restaurantId: string | null) => {
     if (!restaurantId) return false;
 
     try {
+      console.log('Deleting product:', id, 'for restaurant:', restaurantId);
       const { error } = await supabase
         .from('Produtos')
         .delete()
@@ -133,7 +145,8 @@ export const useProdutos = (restaurantId: string | null) => {
         .eq('restaurante_id', restaurantId);
 
       if (error) {
-        console.error('Error deleting product:', error);
+        console.error('Supabase Error deleting product:', error);
+        toast.error(`Erro do Banco: ${error.message}`);
         return false;
       }
 
