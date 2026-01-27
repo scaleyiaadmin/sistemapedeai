@@ -9,7 +9,7 @@ import UndoToast from './UndoToast';
 
 const Dashboard: React.FC = () => {
   const { filter, setFilter } = useApp();
-  const [activeView, setActiveView] = useState<'dashboard' | 'operation' | 'conversations'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'operation' | 'conversations'>('operation');
 
   return (
     <div className="h-screen flex flex-col bg-background">
