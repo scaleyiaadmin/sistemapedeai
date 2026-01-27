@@ -165,13 +165,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleStockAdjustment = (productId: string, productName: string) => {
-    if (stockAdjustment.quantity > 0 && stockAdjustment.reason) {
+    if (stockAdjustment.quantity > 0) {
       addStockMovement({
         productId,
         productName,
         type: stockAdjustment.type,
         quantity: stockAdjustment.quantity,
-        reason: stockAdjustment.reason,
+        reason: 'Ajuste manual',
       });
       setStockAdjustment({ type: 'in', quantity: 0, reason: '' });
       setShowStockAdjust(null);
@@ -858,16 +858,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             onChange={(e) => setStockAdjustment({ ...stockAdjustment, quantity: parseInt(e.target.value) || 0 })}
                             className="rounded-lg"
                           />
-                          <Input
-                            placeholder="Motivo"
-                            value={stockAdjustment.reason}
-                            onChange={(e) => setStockAdjustment({ ...stockAdjustment, reason: e.target.value })}
-                            className="rounded-lg"
-                          />
                           <Button
                             onClick={() => handleStockAdjustment(product.id, product.name)}
                             className="w-full"
-                            disabled={!stockAdjustment.quantity || !stockAdjustment.reason}
+                            disabled={!stockAdjustment.quantity}
                           >
                             Confirmar
                           </Button>
