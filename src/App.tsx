@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import AdminAuth from "./pages/AdminAuth";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLoginForm from "./components/auth/AdminLoginForm";
+import Login from "./pages/Login";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<AdminAuth><AdminDashboard /></AdminAuth>} />
             <Route path="/admin/login" element={<AdminLoginForm />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
