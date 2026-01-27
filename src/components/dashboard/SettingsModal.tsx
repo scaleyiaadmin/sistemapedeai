@@ -34,7 +34,7 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const {
-    settings, updateSettings,
+    settings, updateSettings, saveSettingsToSupabase,
     products, addProduct, updateProduct, deleteProduct,
     customers, addCustomer, updateCustomer, deleteCustomer,
     stockMovements, addStockMovement,
@@ -43,6 +43,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
 
   const [activeTab, setActiveTab] = useState('operation');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [productFilter, setProductFilter] = useState<'all' | 'bar' | 'kitchen'>('all');
@@ -201,6 +203,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   const allTags = [...new Set(customers.flatMap(c => c.tags))];
 
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const success = await saveSettingsToSupabase();
+      if (success) {
+        setHasChanges(false);
+      }
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdateOperationSetting = (updates: Partial<typeof settings>) => {
+    updateSettings(updates);
+    setHasChanges(true);
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -211,6 +232,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <Settings2 className="w-5 h-5 text-primary" />
               Configurações
             </DialogTitle>
+            {activeTab === 'operation' && hasChanges && (
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isSaving}
+                className="gap-2 animate-in fade-in slide-in-from-right-2"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Salvar Alterações
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
@@ -252,7 +287,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Label>Nome do Estabelecimento</Label>
                     <Input
                       value={settings.restaurantName}
-                      onChange={(e) => updateSettings({ restaurantName: e.target.value })}
+                      onChange={(e) => handleUpdateOperationSetting({ restaurantName: e.target.value })}
                       className="rounded-lg"
                     />
                   </div>
@@ -260,7 +295,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Label>WhatsApp</Label>
                     <Input
                       value={settings.whatsappNumber}
-                      onChange={(e) => updateSettings({ whatsappNumber: e.target.value })}
+                      onChange={(e) => handleUpdateOperationSetting({ whatsappNumber: e.target.value })}
                       placeholder="(00) 00000-0000"
                       className="rounded-lg"
                     />
@@ -272,7 +307,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Input
                       type="time"
                       value={settings.openingTime}
-                      onChange={(e) => updateSettings({ openingTime: e.target.value })}
+                      onChange={(e) => handleUpdateOperationSetting({ openingTime: e.target.value })}
                       className="rounded-lg"
                     />
                   </div>
@@ -281,7 +316,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Input
                       type="time"
                       value={settings.closingTime}
-                      onChange={(e) => updateSettings({ closingTime: e.target.value })}
+                      onChange={(e) => handleUpdateOperationSetting({ closingTime: e.target.value })}
                       className="rounded-lg"
                     />
                   </div>
@@ -302,7 +337,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       onChange={(e) => {
                         const value = parseInt(e.target.value) || 1;
                         const maxTables = 50; // Limite máximo contratado
-                        updateSettings({ totalTables: Math.min(Math.max(1, value), maxTables) });
+                        handleUpdateOperationSetting({ totalTables: Math.min(Math.max(1, value), maxTables) });
                       }}
                       className="w-32 h-10 rounded-lg"
                     />
@@ -315,7 +350,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Input
                       type="time"
                       value={settings.kitchenClosingTime || settings.closingTime}
-                      onChange={(e) => updateSettings({ kitchenClosingTime: e.target.value })}
+                      onChange={(e) => handleUpdateOperationSetting({ kitchenClosingTime: e.target.value })}
                       className="w-32 h-10 rounded-lg"
                     />
                     <p className="text-sm text-warning flex items-center gap-1">
@@ -333,7 +368,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   </div>
                   <Switch
                     checked={settings.autoCloseTable}
-                    onCheckedChange={(checked) => updateSettings({ autoCloseTable: checked })}
+                    onCheckedChange={(checked) => handleUpdateOperationSetting({ autoCloseTable: checked })}
                   />
                 </div>
               </div>
@@ -356,7 +391,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     </div>
                     <Switch
                       checked={settings.flashingEnabled}
-                      onCheckedChange={(checked) => updateSettings({ flashingEnabled: checked })}
+                      onCheckedChange={(checked) => handleUpdateOperationSetting({ flashingEnabled: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border">
@@ -377,7 +412,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     </div>
                     <Switch
                       checked={settings.soundEnabled}
-                      onCheckedChange={(checked) => updateSettings({ soundEnabled: checked })}
+                      onCheckedChange={(checked) => handleUpdateOperationSetting({ soundEnabled: checked })}
                     />
                   </div>
                 </div>
@@ -415,7 +450,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             const updatedPrinters = settings.printers.map(p =>
                               p.id === printer.id ? { ...p, isActive: checked } : p
                             );
-                            updateSettings({ printers: updatedPrinters });
+                            handleUpdateOperationSetting({ printers: updatedPrinters });
                           }}
                         />
                       </div>
@@ -726,7 +761,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       <Input
                         type="number"
                         value={settings.lowStockAlert}
-                        onChange={(e) => updateSettings({ lowStockAlert: parseInt(e.target.value) || 15 })}
+                        onChange={(e) => handleUpdateOperationSetting({ lowStockAlert: parseInt(e.target.value) || 15 })}
                         className="rounded-lg"
                       />
                     </div>
@@ -735,7 +770,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       <Input
                         type="number"
                         value={settings.criticalStockAlert}
-                        onChange={(e) => updateSettings({ criticalStockAlert: parseInt(e.target.value) || 5 })}
+                        onChange={(e) => handleUpdateOperationSetting({ criticalStockAlert: parseInt(e.target.value) || 5 })}
                         className="rounded-lg"
                       />
                     </div>

@@ -128,6 +128,7 @@ interface AppContextType {
   tables: Table[];
   settings: AppSettings;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  saveSettingsToSupabase: () => Promise<boolean>;
   products: Product[];
   addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<boolean>;
@@ -382,24 +383,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      return updated;
-    });
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  }, []);
 
-    // Auto-save to Supabase
-    if (restaurantId) {
-      const updates: any = {};
-      if (newSettings.restaurantName !== undefined) updates.nome = newSettings.restaurantName;
-      if (newSettings.totalTables !== undefined) updates.quantidade_mesas = newSettings.totalTables.toString();
-      if (newSettings.kitchenClosingTime !== undefined) updates.horario_fecha_cozinha = newSettings.kitchenClosingTime || null;
-      if (newSettings.whatsappNumber !== undefined) updates.telefone = newSettings.whatsappNumber || null;
+  const saveSettingsToSupabase = useCallback(async () => {
+    if (!restaurantId) return false;
 
-      if (Object.keys(updates).length > 0) {
-        updateRestaurant(updates);
+    try {
+      const { error } = await supabase
+        .from('Restaurantes')
+        .update({
+          nome: settings.restaurantName,
+          quantidade_mesas: settings.totalTables.toString(),
+          horario_fecha_cozinha: settings.kitchenClosingTime || null,
+          telefone: settings.whatsappNumber || null,
+        })
+        .eq('id', restaurantId);
+
+      if (error) {
+        console.error('Error saving settings:', error);
+        toast.error(`Erro ao salvar configurações: ${error.message}`);
+        return false;
       }
+
+      toast.success('Configurações salvas com sucesso!');
+      return true;
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      toast.error('Ocorreu um erro ao salvar as configurações.');
+      return false;
     }
-  }, [restaurantId, updateRestaurant]);
+  }, [restaurantId, settings]);
 
 
   // Sync products from Supabase
@@ -677,6 +691,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       tables,
       settings,
       updateSettings,
+      saveSettingsToSupabase,
       products,
       addProduct,
       updateProduct,
