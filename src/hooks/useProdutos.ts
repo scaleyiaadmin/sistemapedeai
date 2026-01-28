@@ -32,10 +32,12 @@ export const useProdutos = (restaurantId: string | null) => {
   const [loading, setLoading] = useState(false);
 
   // Fetch products from Supabase
-  const fetchProdutos = useCallback(async () => {
+  const fetchProdutos = useCallback(async (options: { silent?: boolean } = {}) => {
     if (!restaurantId) return;
 
-    setLoading(true);
+    if (!options.silent) {
+      setLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('Produtos')

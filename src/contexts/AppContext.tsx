@@ -234,9 +234,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!restaurantId) return;
 
     const interval = setInterval(() => {
-      refetchPedidos();
-      refetchProdutos();
-      refetchRestaurant();
+      refetchPedidos({ silent: true });
+      refetchProdutos({ silent: true });
+      refetchRestaurant({ silent: true });
     }, 2000);
 
     return () => clearInterval(interval);

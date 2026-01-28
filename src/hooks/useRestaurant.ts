@@ -23,14 +23,16 @@ export const useRestaurant = (restaurantId: string | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRestaurant = useCallback(async () => {
+  const fetchRestaurant = useCallback(async (options: { silent?: boolean } = {}) => {
     if (!restaurantId) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!options.silent) {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('Restaurantes')
         .select('*')

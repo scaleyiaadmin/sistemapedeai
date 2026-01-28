@@ -5,22 +5,13 @@ import { usePedidos } from '@/hooks/usePedidos';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 const OrderQueue: React.FC = () => {
   const { restaurantId, filter } = useApp();
   const { pedidos, updatePedidoStatus, deletePedido, loading } = usePedidos(restaurantId);
-  
+
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   // Filter pedidos based on status (pending only)
@@ -30,7 +21,7 @@ const OrderQueue: React.FC = () => {
     setUpdatingId(pedidoId);
     const result = await updatePedidoStatus(pedidoId, 'entregue');
     setUpdatingId(null);
-    
+
     if (result.error) {
       toast.error('Erro ao marcar como entregue');
     } else {
@@ -42,8 +33,7 @@ const OrderQueue: React.FC = () => {
     setDeletingId(pedidoId);
     const result = await deletePedido(pedidoId);
     setDeletingId(null);
-    setConfirmDeleteId(null);
-    
+
     if (result.error) {
       toast.error('Erro ao excluir pedido');
     } else {
@@ -81,7 +71,7 @@ const OrderQueue: React.FC = () => {
         ) : (
           <div className="space-y-3">
             {pendingPedidos.map((pedido) => (
-              <div 
+              <div
                 key={pedido.id}
                 className="bg-secondary/50 rounded-xl p-4 animate-fade-in"
               >
@@ -93,11 +83,10 @@ const OrderQueue: React.FC = () => {
                       {formatTime(pedido.created_at)}
                     </span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    pedido.status === 'preparando' 
-                      ? 'bg-warning/20 text-warning' 
-                      : 'bg-info/20 text-info'
-                  }`}>
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${pedido.status === 'preparando'
+                    ? 'bg-warning/20 text-warning'
+                    : 'bg-info/20 text-info'
+                    }`}>
                     {pedido.status === 'preparando' ? '🔥 Preparando' : '⏳ Pendente'}
                   </span>
                 </div>
@@ -145,7 +134,7 @@ const OrderQueue: React.FC = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setConfirmDeleteId(pedido.id)}
+                    onClick={() => handleDelete(pedido.id)}
                     disabled={deletingId === pedido.id}
                     className="h-10 w-10 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
@@ -162,26 +151,6 @@ const OrderQueue: React.FC = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={confirmDeleteId !== null} onOpenChange={() => setConfirmDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Pedido</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este pedido? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
