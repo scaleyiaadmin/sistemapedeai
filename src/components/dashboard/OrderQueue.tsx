@@ -12,8 +12,11 @@ const OrderQueue: React.FC = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  // Filter pedidos based on status (pending only)
-  const pendingPedidos = pedidos.filter(p => p.status === 'pendente' || p.status === 'preparando');
+  // Filter pedidos based on status (pending only) and exclude system items
+  const pendingPedidos = pedidos.filter(p =>
+    (p.status === 'pendente' || p.status === 'preparando') &&
+    !p.itens.some(item => item.nome === 'Atendimento Iniciado')
+  );
 
   const handleDeliver = async (pedidoId: number) => {
     setUpdatingId(pedidoId);
