@@ -300,7 +300,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Keep tables in sync with orders coming from the DB (e.g. WhatsApp bot)
     // Rule: table becomes occupied if there is at least one active (non-closed) pedido for it.
-    const activePedidos = pedidos.filter(p => p.status !== 'fechado');
     const mesasComPedidos = new Set(activePedidos.map(p => p.mesa));
     const mesasComContaPedida = new Set(activePedidos.filter(p => p.status === 'pagamento_pendente').map(p => p.mesa));
 
