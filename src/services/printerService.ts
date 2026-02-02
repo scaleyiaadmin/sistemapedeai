@@ -74,20 +74,18 @@ export const formatReceipt = (pedido: PrintOrderData, restaurantName: string = '
 
 /**
  * MÉTODO 2 (MAIS SIMPLES): Link Direto (Deep Link/Intent)
- * Não precisa de servidor nem configurar Chrome.
- * O navegador vai perguntar "Abrir RawBT?" e o usuário permite.
+ * Usa o esquema rawbt: que força o app a reconhecer como dados de impressão.
  */
 export const printViaDeepLink = (content: string) => {
   // Converte o HTML para Base64 corretamente (suportando acentos/utf-8)
   const base64 = btoa(unescape(encodeURIComponent(content)));
 
-  // Monta a URL no formato que o Android entende como "Abrir App"
-  // S.payload = dados
-  // S.type = tipo de dado (html)
-  const intentUrl = `intent:#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;S.type=text/html;S.payload=${base64};end;`;
+  // O esquema rawbt:base64, instrui o app a decodificar e processar (imprimir)
+  // Isso geralmente ignora a tela de "Nova Tarefa" e vai direto pro driver
+  const directUrl = `rawbt:base64,${base64}`;
 
   // Força abrir o link
-  window.location.href = intentUrl;
+  window.location.href = directUrl;
   return true;
 };
 
