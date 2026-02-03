@@ -14,6 +14,8 @@ export interface PrintOrderData {
 }
 
 // URL do RawBT (geralmente fixo na porta 40213 para localhost)
+const RAWBT_URL = 'http://localhost:40213/print';
+
 // --- WEB BLUETOOTH API SUPPORT (NATIVO DO CHROME) ---
 
 // Tipagem "any" para evitar erros de build já que a API é experimental e não está no TS padrão
@@ -51,12 +53,9 @@ export const connectBluetoothPrinter = async (): Promise<boolean> => {
       filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }], // UUID padrão de impressoras
       optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
       acceptAllDevices: false
-      // Nota: Algumas impressoras genéricas não anunciam o serviço correto.
-      // Se falhar, podemos tentar acceptAllDevices: true, mas requer listar services em optionalServices.
-    }).catch((err: any) => {
-      // Fallback para tentar listar tudo se o filtro falhar
+    }).catch(async (err: any) => {
       console.log('Filtro específico falhou, tentando aceitar todos...', err);
-      return nav.bluetooth.requestDevice({
+      return await nav.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
       });
@@ -71,12 +70,10 @@ export const connectBluetoothPrinter = async (): Promise<boolean> => {
     const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
 
     console.log('Obtendo característica de escrita...');
-    // UUID padrão para escrita em impressoras térmicas
     printCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
 
     console.log('Impressora conectada!');
 
-    // Adiciona listener para desconexão
     bluetoothDevice.addEventListener('gattserverdisconnected', () => {
       console.log('Impressora desconectada!');
       printCharacteristic = null;
@@ -95,7 +92,7 @@ export const connectBluetoothPrinter = async (): Promise<boolean> => {
  */
 const encode = (data: string): Uint8Array => {
   const encoder = new TextEncoder();
-  return encoder.encode(data); // Nota: TextEncoder gera UTF-8. Impressoras antigas podem precisar de conversão manual para PC850/860 se tiver acentos.
+  return encoder.encode(data);
 };
 
 /**
@@ -121,7 +118,7 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   addCmd(COMMANDS.TEXT_DOUBLE);
   add(removeAccents(restaurantName).toUpperCase() + '\n');
   addCmd(COMMANDS.TEXT_NORMAL);
-  add(new Date().toLocaleString('pt-BR') + '\n');
+  add(new Date(pedido.created_at).toLocaleString('pt-BR') + '\n');
   add('--------------------------------\n');
 
   // Mesa e Pedido
@@ -141,18 +138,14 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   pedido.itens.forEach(item => {
     const nome = removeAccents(item.nome);
     const qtd = item.quantidade;
-    const totalItem = (item.preco * qtd).toFixed(2);
-    // Formatação simples: QTD x NOME .... PREÇO
     add(`${qtd}x ${nome}\n`);
-    addCmd(COMMANDS.TEXT_CENTER); // Gambiarra de alinhamento rápido ou apenas jogar na linha de baixo
-    addCmd(COMMANDS.TEXT_LEFT);
   });
 
   add('--------------------------------\n');
 
   // Total
   addCmd(COMMANDS.TEXT_DOUBLE);
-  add(`TOTAL: R$ ${pedido.total.toFixed(2)}\n`);
+  add(`TOTAL: R$ ${pedido.total.toFixed(2).replace('.', ',')}\n`);
   addCmd(COMMANDS.TEXT_NORMAL);
 
   // Observações
@@ -164,12 +157,11 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   add('\n\n');
   addCmd(COMMANDS.TEXT_CENTER);
   add('Obrigado pela preferencia!\n');
-  add('Sistema PedeAi\n\n\n\n'); // Feed lines
+  add('Sistema PedeAi\n\n\n\n');
 
   // Cortar papel
   addCmd(COMMANDS.CUT);
 
-  // Mergeall arrays
   const totalLength = parts.reduce((acc, part) => acc + part.length, 0);
   const result = new Uint8Array(totalLength);
   let offset = 0;
@@ -192,20 +184,47 @@ export const printViaWebBluetooth = async (pedido: PrintOrderData, restaurantNam
 
   try {
     const data = generateEscPosData(pedido, restaurantName);
-
-    // O Web Bluetooth tem limite de tamanho de pacote (chunks). 
-    // Vamos enviar em pedaços de 512 bytes para garantir.
     const CHUNK_SIZE = 512;
     for (let i = 0; i < data.length; i += CHUNK_SIZE) {
       const chunk = data.slice(i, i + CHUNK_SIZE);
-      await printCharacteristic?.writeValue(chunk);
+      await printCharacteristic.writeValue(chunk);
     }
-
     return true;
   } catch (error) {
     console.error('Erro ao escrever na impressora:', error);
-    // Tenta reconectar uma vez
     printCharacteristic = null;
     return false;
   }
+};
+
+/**
+ * Legado: Imprime via RawBT App (HTTP POST)
+ */
+export const printToRawBT = async (content: string): Promise<boolean> => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    const response = await fetch(RAWBT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: content,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (error) {
+    console.error('Falha ao conectar com RawBT:', error);
+    return false;
+  }
+};
+
+/**
+ * Legado: Imprime via RawBT Deep Link
+ */
+export const printViaDeepLink = (content: string) => {
+  const base64 = btoa(unescape(encodeURIComponent(content)));
+  window.location.href = `rawbt:base64,${base64}`;
+  return true;
 };

@@ -17,7 +17,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { printToRawBT, printViaDeepLink, connectBluetoothPrinter, printViaWebBluetooth } from '@/services/printerService';
+import {
+  printToRawBT,
+  printViaDeepLink,
+  connectBluetoothPrinter,
+  printViaWebBluetooth
+} from '@/services/printerService';
 
 const PRODUCT_CATEGORIES = [
   'Bebida',
