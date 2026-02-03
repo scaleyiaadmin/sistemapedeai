@@ -212,40 +212,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleTestPrint = async () => {
-    const success = await printToRawBT(
-      `<html>
-        <body style="font-family: monospace; text-align: center;">
-          <h1 style="font-size: 24px;">TESTE PEDEAI</h1>
-          <p style="font-size: 16px;">Se você está lendo isso, o RawBT está configurado corretamente!</p>
-          <hr style="border-top: 1px dashed black;">
-          <p>Configuração OK</p>
-          <br><br>
-        </body>
-      </html>`
-    );
 
-    if (success) {
-      toast.success('Comando enviado para o RawBT!');
-    } else {
-      toast.error('Falha ao enviar. Verifique se o RawBT está rodando no tablet.');
-    }
-  };
-
-  const handleTestDeepLink = () => {
-    printViaDeepLink(
-      `<html>
-        <body style="font-family: monospace; text-align: center;">
-          <h1 style="font-size: 24px;">TESTE SIMPLES</h1>
-          <p>MÉTODO "LINK DIRETO"</p>
-          <hr>
-          <p>Se imprimiu, use este método!</p>
-          <br><br>
-        </body>
-      </html>`
-    );
-    toast.info('Abrindo app de impressão...');
-  };
 
   const handleConnectBluetooth = async () => {
     const success = await connectBluetoothPrinter();
@@ -584,10 +551,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     Impressoras
                   </h3>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleTestPrint} className="gap-2">
-                      <Printer className="w-4 h-4" />
-                      Testar Impressão
-                    </Button>
                     <Button variant="outline" size="sm" className="gap-2">
                       <Plus className="w-4 h-4" />
                       Adicionar
@@ -595,22 +558,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
-                  <h4 className="text-sm font-semibold text-blue-500 mb-1">Configuração RawBT (Tablet)</h4>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Para imprimir silenciosamente, o app <strong>RawBT</strong> deve estar instalado com a opção "Print Server" ativa.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Certifique-se também que o Chrome tem a flag <code>allow-insecure-localhost</code> ativada.
-                  </p>
-                </div>
 
-                <div className="flex justify-end mb-4">
-                  <Button variant="secondary" size="sm" onClick={handleTestDeepLink} className="gap-2 w-full sm:w-auto">
-                    <Printer className="w-4 h-4" />
-                    Testar Método Simples (Sem Configuração)
-                  </Button>
-                </div>
 
                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-4">
                   <h4 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-1">Impressão Nativa (Recomendado) (BETA)</h4>
