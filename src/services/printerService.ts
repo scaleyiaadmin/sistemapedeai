@@ -16,8 +16,9 @@ export interface PrintOrderData {
 // URL do RawBT (geralmente fixo na porta 40213 para localhost)
 // --- WEB BLUETOOTH API SUPPORT (NATIVO DO CHROME) ---
 
-let bluetoothDevice: BluetoothDevice | null = null;
-let printCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+// Tipagem "any" para evitar erros de build já que a API é experimental e não está no TS padrão
+let bluetoothDevice: any | null = null;
+let printCharacteristic: any | null = null;
 
 // Comandos ESC/POS básicos
 const ESC = '\x1B';
@@ -38,23 +39,24 @@ const COMMANDS = {
  */
 export const connectBluetoothPrinter = async (): Promise<boolean> => {
   try {
-    if (!navigator.bluetooth) {
+    const nav = navigator as any;
+    if (!nav.bluetooth) {
       alert('Seu navegador não suporta Web Bluetooth. Use o Chrome no Android/PC.');
       return false;
     }
 
     // Solicita o dispositivo (filtra por serviço de impressão ou mostra todos)
     console.log('Solicitando dispositivo Bluetooth...');
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
+    bluetoothDevice = await nav.bluetooth.requestDevice({
       filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }], // UUID padrão de impressoras
       optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
       acceptAllDevices: false
       // Nota: Algumas impressoras genéricas não anunciam o serviço correto.
       // Se falhar, podemos tentar acceptAllDevices: true, mas requer listar services em optionalServices.
-    }).catch(err => {
+    }).catch((err: any) => {
       // Fallback para tentar listar tudo se o filtro falhar
       console.log('Filtro específico falhou, tentando aceitar todos...', err);
-      return navigator.bluetooth.requestDevice({
+      return nav.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
       });
