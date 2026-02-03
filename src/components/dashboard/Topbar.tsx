@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Search, Settings, Circle, LogOut } from 'lucide-react';
+import { Search, Settings, Circle, LogOut, Wifi } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { getConnectedDeviceName } from '@/services/printerService';
 import Logo from '@/components/Logo';
 import SettingsModal from './SettingsModal';
 import PasswordModal from './PasswordModal';
@@ -122,8 +123,24 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
         </div>
 
         {/* Right: Status, Search, Settings */}
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-4 border-r border-border pr-4">
+          {/* Bluetooth Status */}
+          <div className="flex items-center gap-1.5">
+            {getConnectedDeviceName() ? (
+              <div className="flex items-center gap-1.5 text-success animate-pulse">
+                <Wifi className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Impressora OK</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-muted-foreground opacity-50">
+                <Wifi className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Sem Impressora</span>
+              </div>
+            )}
+          </div>
+
+          {/* Online Status */}
+          <div className="flex items-center gap-2">
             {isOnline ? (
               <div className="flex items-center gap-1.5 text-primary text-sm font-medium">
                 <Circle className="w-2.5 h-2.5 fill-current" />

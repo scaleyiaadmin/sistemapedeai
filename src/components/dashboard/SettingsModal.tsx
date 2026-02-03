@@ -557,7 +557,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                       <Switch
                         id="auto-print"
                         checked={settings.autoPrintEnabled}
-                        onCheckedChange={(checked) => handleUpdateOperationSetting({ autoPrintEnabled: checked })}
+                        onCheckedChange={(checked) => {
+                          handleUpdateOperationSetting({ autoPrintEnabled: checked });
+                          // Força o salvamento imediato no banco de dados para evitar "bate-volta" do switch
+                          setTimeout(() => saveSettingsToSupabase(), 100);
+                        }}
                       />
                     </div>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -607,7 +611,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   ) : null}
 
-                  {settings.printers.map((printer) => (
+                  {/* 
+                  Ocultamos a lista antiga de impressoras IP/Mock pois o usuário quer focar no Bluetooth Nativo.
+                  Se futuramente precisar de IP, basta descomentar este bloco.
+                  */}
+                  {/* settings.printers.map((printer) => (
                     <div key={printer.id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${printer.isActive ? 'bg-success' : 'bg-destructive'}`} />
@@ -631,7 +639,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                         />
                       </div>
                     </div>
-                  ))}
+                  )) */}
+
                 </div>
               </div>
             </TabsContent>

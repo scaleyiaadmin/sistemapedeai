@@ -358,14 +358,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // --- LOGICA DE IMPRESSÃO AUTOMÁTICA ---
   const printedOrdersRef = React.useRef<Set<number>>(new Set());
+  const initialSyncDone = React.useRef(false);
+
+  // Sincroniza o Ref inicial para evitar imprimir pedidos antigos ao carregar ou ligar o interruptor
+  useEffect(() => {
+    if (!initialSyncDone.current && pedidos.length > 0) {
+      pedidos.forEach(p => {
+        if (p.status === 'pendente' || p.status === 'preparando') {
+          printedOrdersRef.current.add(p.id);
+        }
+      });
+      initialSyncDone.current = true;
+      console.log(`[AutoPrint] Ref inicial sincronizado com ${printedOrdersRef.current.size} pedidos existentes.`);
+    }
+  }, [pedidos]);
 
   useEffect(() => {
     if (!settings.autoPrintEnabled) return;
 
     // Filtra pedidos pendentes que ainda não foram impressos nesta sessão
-    const newPendingOrders = pedidos.filter(p =>
-      p.status === 'pendente' && !printedOrdersRef.current.has(p.id)
-    );
+    const newPendingOrders = pedidos.filter(p => {
+      const isPending = p.status === 'pendente';
+      const notPrintedYet = !printedOrdersRef.current.has(p.id);
+
+      // Filtra pedidos que são apenas marcadores de abertura de mesa
+      const isNotOnlyAtendimento = !p.itens.every(item =>
+        item.nome.includes('Atendimento Iniciado') ||
+        item.nome.includes('Mesa aberta')
+      );
+
+      return isPending && notPrintedYet && isNotOnlyAtendimento;
+    });
 
     if (newPendingOrders.length > 0) {
       console.log(`[AutoPrint] Detectados ${newPendingOrders.length} novos pedidos.`);
@@ -385,6 +408,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
     }
   }, [pedidos, settings.autoPrintEnabled, settings.restaurantName]);
+  // --------------------------------------
   // --------------------------------------
 
   const generateTables = useCallback((count: number): Table[] => {
@@ -787,11 +811,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [orders]);
 
-  const reprintOrder = useCallback((orderId: string) => {
+  const reprintOrder = useCallback(async (orderId: string) => {
     const pedido = pedidos.find(p => p.id === parseInt(orderId));
     if (pedido) {
-      printOrder(pedido, settings.restaurantName);
-      toast.success('Re-imprimindo pedido...');
+      toast.info('Enviando para impressora Bluetooth...');
+      const success = await printViaWebBluetooth(pedido, settings.restaurantName);
+      if (success) {
+        toast.success('Re-imprimindo pedido...');
+      } else {
+        toast.error('Falha ao imprimir. A impressora está conectada?');
+      }
     } else {
       toast.error('Pedido não encontrado para re-impressão');
     }
