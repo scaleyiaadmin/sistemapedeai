@@ -16,6 +16,7 @@ export interface Restaurant {
   alerta_estoque_baixo: number | null;
   alerta_estoque_critico: number | null;
   impressao_auto: boolean | null;
+  max_mesas: string | null;
   created_at: string;
 }
 

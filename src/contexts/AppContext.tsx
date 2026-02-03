@@ -146,6 +146,7 @@ interface AppContextType {
   closeTable: (tableId: number) => void;
   addItemToTable: (tableId: number, item: OrderItem) => Promise<void>;
   customers: Customer[];
+  restaurant: any; // Exposed to allow access to max_mesas and other DB raw data
   addCustomer: (customer: Omit<Customer, 'id'>) => void;
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
@@ -546,6 +547,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return false;
       }
 
+      // IMPORTANTE: Atualiza o cache local do restaurante imediatamente para evitar "flicker"
+      // Se não fizermos isso, o poll vai trazer o dado antigo do banco antes da propagação
+      await updateRestaurant({
+        nome: settings.restaurantName,
+        quantidade_mesas: settings.totalTables.toString(),
+        horario_fecha_cozinha: settings.kitchenClosingTime || null,
+        telefone: settings.whatsappNumber || null,
+        horario_abertura: settings.openingTime,
+        horario_fechamento: settings.closingTime,
+        fechar_mesa_auto: settings.autoCloseTable,
+        alertas_piscantes: settings.flashingEnabled,
+        sons_habilitados: settings.soundEnabled,
+        alerta_estoque_baixo: settings.lowStockAlert,
+        alerta_estoque_critico: settings.criticalStockAlert,
+        impressao_auto: settings.autoPrintEnabled,
+      });
+
       toast.success('Configurações salvas com sucesso!');
       return true;
     } catch (err) {
@@ -921,6 +939,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addCampaign,
     updateCampaign,
     deleteCampaign,
+    restaurant,
     undoAction,
     performUndo,
     clearUndo,
@@ -968,6 +987,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     addCampaign,
     updateCampaign,
     deleteCampaign,
+    restaurant,
     undoAction,
     performUndo,
     clearUndo,

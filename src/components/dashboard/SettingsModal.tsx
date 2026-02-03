@@ -45,7 +45,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     products, addProduct, updateProduct, deleteProduct,
     customers, addCustomer, updateCustomer, deleteCustomer,
     stockMovements, addStockMovement,
-    campaigns, addCampaign, updateCampaign, deleteCampaign
+    campaigns, addCampaign, updateCampaign, deleteCampaign,
+    restaurant // Adicionado para acessar o max_mesas
   } = useApp();
 
   // Initialize local state with settings
@@ -456,19 +457,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <Label>Número de Mesas</Label>
                     <Input
                       type="number"
-                      min={1}
-                      max={50}
+                      max={parseInt(restaurant?.max_mesas || '50')}
                       value={localSettings.totalTables}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value) || 1;
-                        const maxTables = 50;
-                        handleLocalChange('totalTables', Math.min(Math.max(1, value), maxTables));
+                        const val = e.target.value;
+                        if (val === '') {
+                          handleLocalChange('totalTables', 0);
+                          return;
+                        }
+                        const value = parseInt(val);
+                        const maxTables = parseInt(restaurant?.max_mesas || '50');
+                        handleLocalChange('totalTables', Math.min(Math.max(0, value), maxTables));
                       }}
                       onBlur={() => handleBlurSave('totalTables')}
                       className="w-32 h-10 rounded-lg"
                     />
                     <p className="text-sm text-muted-foreground">
-                      Máximo contratado: 50 mesas
+                      Máximo contratado: {restaurant?.max_mesas || '50'} mesas
                     </p>
                   </div>
                   <div className="space-y-2">
