@@ -851,18 +851,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // --- AUTO PRINT BILL LOGIC ---
       if (table.consumption && table.consumption.length > 0) {
-        const total = table.consumption.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        // Calculate totals
+        const subtotal = table.consumption.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const serviceFeePercentage = settings.serviceFee || 0;
+        const serviceFeeValue = (subtotal * serviceFeePercentage) / 100;
+        const totalWithFee = subtotal + serviceFeeValue;
 
-        const billData: any = { // Using any to match PrintOrderData without strict type conflicts if any
+        // Prepare print data
+        const billData: any = {
           id: `F${tableId}-${new Date().getHours()}${new Date().getMinutes()}`,
           mesa: tableId,
           created_at: new Date(),
           itens: table.consumption.map(i => ({
             nome: i.productName,
             quantidade: i.quantity,
-            preco: i.price
+            preco: i.price,
+            descricao: i.description // Pass entry description if exists
           })),
-          total: total,
+          total: totalWithFee, // Default for backward compat if needed, but we use fields below
+          subtotal: subtotal,
+          serviceFee: serviceFeeValue,
+          serviceFeePercentage: serviceFeePercentage,
+          totalWithFee: totalWithFee,
           descricao: 'Fechamento de Conta'
         };
 

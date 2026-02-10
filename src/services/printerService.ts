@@ -2,6 +2,7 @@ export interface PrintItem {
   nome: string;
   quantidade: number;
   preco: number;
+  descricao?: string;
 }
 
 export interface PrintOrderData {
@@ -9,8 +10,12 @@ export interface PrintOrderData {
   mesa: number | string;
   created_at: string | Date;
   itens: PrintItem[];
-  total: number;
-  descricao?: string; // Observações
+  total: number; // This can be the final total with fee or raw total, depending on usage. We will use specific fields below for clarity.
+  subtotal?: number;
+  serviceFee?: number; // Value of the service fee (e.g. 10% of subtotal)
+  serviceFeePercentage?: number; // e.g. 10
+  totalWithFee?: number;
+  descricao?: string; // Observações do pedido geral ou "Fechamento de Conta"
 }
 
 // URL do RawBT (geralmente fixo na porta 40213 para localhost)
@@ -40,6 +45,7 @@ const COMMANDS = {
   TEXT_CENTER: ESC + 'a' + '\x01',
   TEXT_LEFT: ESC + 'a' + '\x00',
   TEXT_DOUBLE: GS + '!' + '\x11', // Double height & width
+  TEXT_SMALL: ESC + '!' + '\x01', // Small text
 };
 
 /**
@@ -128,12 +134,16 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   add(new Date(pedido.created_at).toLocaleString('pt-BR') + '\n');
   add('--------------------------------\n');
 
-  // Mesa e Pedido
+  // Mesa e Pedido (ou Conta)
   addCmd(COMMANDS.TEXT_BOLD);
   addCmd(COMMANDS.TEXT_DOUBLE);
-  add(`MESA ${pedido.mesa}\n`);
-  addCmd(COMMANDS.TEXT_NORMAL);
-  add(`Pedido #${pedido.id}\n`);
+  if (pedido.descricao === 'Fechamento de Conta') {
+    add(`CONTA MESA ${pedido.mesa}\n`);
+  } else {
+    add(`MESA ${pedido.mesa}\n`);
+    addCmd(COMMANDS.TEXT_NORMAL);
+    add(`Pedido #${pedido.id}\n`);
+  }
   add('--------------------------------\n');
 
   // Itens
@@ -145,18 +155,56 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   pedido.itens.forEach(item => {
     const nome = removeAccents(item.nome);
     const qtd = item.quantidade;
+    const precoTotalItem = item.preco * qtd;
+
+    // Linha principal: Qtd x Nome ... Preço
+    // Vamos tentar alinhar um pouco visualmente se possível, mas simples é melhor
     add(`${qtd}x ${nome}\n`);
+
+    // Descrição do item (se houver)
+    if (item.descricao) {
+      add(`   (${removeAccents(item.descricao)})\n`);
+    }
+
+    // Preço do item alinhado à direita (simulado com espaços ou apenas nova linha)
+    // Para simplificar em impressoras térmicas sem largura fixa conhecida, colocamos abaixo ou ao lado
+    // add(`   R$ ${precoTotalItem.toFixed(2).replace('.', ',')}\n`); 
   });
 
   add('--------------------------------\n');
 
-  // Total
-  addCmd(COMMANDS.TEXT_DOUBLE);
-  add(`TOTAL: R$ ${pedido.total.toFixed(2).replace('.', ',')}\n`);
-  addCmd(COMMANDS.TEXT_NORMAL);
+  // Totais
+  addCmd(COMMANDS.TEXT_LEFT);
 
-  // Observações
-  if (pedido.descricao) {
+  if (pedido.subtotal !== undefined && pedido.totalWithFee !== undefined) {
+    // É uma conta detalhada
+    add(`Subtotal: R$ ${pedido.subtotal.toFixed(2).replace('.', ',')}\n`);
+
+    if (pedido.serviceFeePercentage && pedido.serviceFeePercentage > 0) {
+      add(`Servico (${pedido.serviceFeePercentage}%): R$ ${(pedido.serviceFee || 0).toFixed(2).replace('.', ',')}\n`);
+
+      addCmd(COMMANDS.TEXT_DOUBLE);
+      add(`TOTAL: R$ ${pedido.totalWithFee.toFixed(2).replace('.', ',')}\n`);
+      addCmd(COMMANDS.TEXT_NORMAL);
+
+      add('\n');
+      add(`(Sem a taxa: R$ ${pedido.subtotal.toFixed(2).replace('.', ',')})\n`);
+    } else {
+      // Sem taxa de serviço configurada
+      addCmd(COMMANDS.TEXT_DOUBLE);
+      add(`TOTAL: R$ ${pedido.totalWithFee.toFixed(2).replace('.', ',')}\n`);
+      addCmd(COMMANDS.TEXT_NORMAL);
+    }
+
+  } else {
+    // É apenas um pedido individual ou legado
+    addCmd(COMMANDS.TEXT_DOUBLE);
+    add(`TOTAL: R$ ${pedido.total.toFixed(2).replace('.', ',')}\n`);
+    addCmd(COMMANDS.TEXT_NORMAL);
+  }
+
+  // Observações Gerais
+  if (pedido.descricao && pedido.descricao !== 'Fechamento de Conta') {
     add('\nOBS: ' + removeAccents(pedido.descricao) + '\n');
   }
 
