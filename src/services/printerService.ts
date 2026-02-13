@@ -137,9 +137,11 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   // Mesa e Pedido (ou Conta)
   addCmd(COMMANDS.TEXT_BOLD);
   addCmd(COMMANDS.TEXT_DOUBLE);
+
   if (pedido.descricao === 'Fechamento de Conta') {
     add(`CONTA MESA ${pedido.mesa}\n`);
   } else {
+    // Pedido normal de itens
     add(`MESA ${pedido.mesa}\n`);
     addCmd(COMMANDS.TEXT_NORMAL);
     add(`Pedido #${pedido.id}\n`);
@@ -155,49 +157,69 @@ const generateEscPosData = (pedido: PrintOrderData, restaurantName: string): Uin
   pedido.itens.forEach(item => {
     const nome = removeAccents(item.nome);
     const qtd = item.quantidade;
-    const precoTotalItem = item.preco * qtd;
 
-    // Linha principal: Qtd x Nome ... Preço
-    // Vamos tentar alinhar um pouco visualmente se possível, mas simples é melhor
+    // Calcula o valor total deste item (qtd * preco unitario)
+    const totalItem = item.preco * qtd;
+
+    // Linha 1: Qtd x Nome
     add(`${qtd}x ${nome}\n`);
 
-    // Descrição do item (se houver)
+    // Descrição do item (se houver) - indentado
     if (item.descricao) {
       add(`   (${removeAccents(item.descricao)})\n`);
     }
 
-    // Preço do item alinhado à direita (simulado com espaços ou apenas nova linha)
-    // Para simplificar em impressoras térmicas sem largura fixa conhecida, colocamos abaixo ou ao lado
-    // add(`   R$ ${precoTotalItem.toFixed(2).replace('.', ',')}\n`); 
+    // Linha de valor: R$ Unitário ....... R$ Total
+    // Tentativa de alinhamento visual simples
+    const unitPriceStr = `R$ ${item.preco.toFixed(2).replace('.', ',')}`;
+    const totalPriceStr = `R$ ${totalItem.toFixed(2).replace('.', ',')}`;
+
+    // Se for apenas 1 item, mostra direto o total. Se for mais, mostra unitário e total.
+    if (qtd > 1) {
+      add(`   ${unitPriceStr} cada ....... `);
+    } else {
+      add(`   ........................ `);
+    }
+    add(`${totalPriceStr}\n\n`);
   });
 
   add('--------------------------------\n');
 
-  // Totais
-  addCmd(COMMANDS.TEXT_LEFT);
-
+  // Totais (Apenas se for Fechamento de Conta ou tiver totais calculados)
   if (pedido.subtotal !== undefined && pedido.totalWithFee !== undefined) {
-    // É uma conta detalhada
+    addCmd(COMMANDS.TEXT_LEFT);
+
+    // Subtotal
     add(`Subtotal: R$ ${pedido.subtotal.toFixed(2).replace('.', ',')}\n`);
 
+    // Taxa de Serviço
     if (pedido.serviceFeePercentage && pedido.serviceFeePercentage > 0) {
       add(`Servico (${pedido.serviceFeePercentage}%): R$ ${(pedido.serviceFee || 0).toFixed(2).replace('.', ',')}\n`);
 
+      add('\n');
+
+      // TOTAL COM TAXA (Em destaque)
       addCmd(COMMANDS.TEXT_DOUBLE);
-      add(`TOTAL: R$ ${pedido.totalWithFee.toFixed(2).replace('.', ',')}\n`);
+      addCmd(COMMANDS.TEXT_BOLD);
+      add(`TOTAL c/taxa: R$ ${pedido.totalWithFee.toFixed(2).replace('.', ',')}\n`);
       addCmd(COMMANDS.TEXT_NORMAL);
+      addCmd(COMMANDS.TEXT_NORMAL); // Reset double/bold
 
       add('\n');
-      add(`(Sem a taxa: R$ ${pedido.subtotal.toFixed(2).replace('.', ',')})\n`);
+
+      // TOTAL SEM TAXA (Opção para o cliente)
+      add(`(Total s/ taxa: R$ ${pedido.subtotal.toFixed(2).replace('.', ',')})\n`);
+
     } else {
-      // Sem taxa de serviço configurada
+      // Sem taxa
       addCmd(COMMANDS.TEXT_DOUBLE);
+      addCmd(COMMANDS.TEXT_BOLD);
       add(`TOTAL: R$ ${pedido.totalWithFee.toFixed(2).replace('.', ',')}\n`);
       addCmd(COMMANDS.TEXT_NORMAL);
     }
 
   } else {
-    // É apenas um pedido individual ou legado
+    // Fallback para pedidos simples (parciais)
     addCmd(COMMANDS.TEXT_DOUBLE);
     add(`TOTAL: R$ ${pedido.total.toFixed(2).replace('.', ',')}\n`);
     addCmd(COMMANDS.TEXT_NORMAL);

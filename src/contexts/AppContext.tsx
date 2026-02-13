@@ -422,6 +422,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
     }
   }, [pedidos, settings.autoPrintEnabled, settings.restaurantName]);
+
   // --------------------------------------
   // --------------------------------------
 
@@ -436,6 +437,79 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const [tables, setTables] = useState<Table[]>(() => generateTables(settings.totalTables));
+
+  // --- LOGICA DE IMPRESSÃO AUTOMÁTICA DA CONTA (Mesa com status 'bill' ou 'pagamento_pendente') ---
+  const printedBillsRef = React.useRef<Set<number>>(new Set());
+  // Ref para rastrear se a mesa já estava com conta pedida na carga inicial (para não imprimir contas antigas no F5)
+  const initialBillSyncDone = React.useRef(false);
+
+  useEffect(() => {
+    if (!initialBillSyncDone.current && tables.length > 0) {
+      tables.forEach(t => {
+        if (t.alert === 'bill' || t.orders.some(o => o.status === 'pending_payment' as any)) { // 'pending_payment' mapped from 'pagamento_pendente' logic? 
+          // Na verdade, verifiquemos com base no alert e se tem consumo
+          if (t.alert === 'bill') {
+            printedBillsRef.current.add(t.id);
+          }
+        }
+      });
+      initialBillSyncDone.current = true;
+    }
+  }, [tables]);
+
+  useEffect(() => {
+    if (!settings.autoPrintEnabled) return;
+
+    tables.forEach(async (table) => {
+      // Verifica se a mesa está pedindo conta
+      const isBillRequested = table.alert === 'bill';
+
+      // Verifica se já foi impresso nesta sessão
+      const alreadyPrinted = printedBillsRef.current.has(table.id);
+
+      if (isBillRequested && !alreadyPrinted && table.consumption.length > 0) {
+        console.log(`[AutoPrint] Detectada solicitação de conta na Mesa ${table.id}`);
+
+        // Marca como impresso para não repetir loop
+        printedBillsRef.current.add(table.id);
+
+        // Prepara dados da conta (mesma lógica do requestBill)
+        const subtotal = table.consumption.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const serviceFeePercentage = settings.serviceFee || 0;
+        const serviceFeeValue = (subtotal * serviceFeePercentage) / 100;
+        const totalWithFee = subtotal + serviceFeeValue;
+
+        const billData: any = {
+          id: `AutoF${table.id}-${Date.now()}`,
+          mesa: table.id,
+          created_at: new Date(),
+          itens: table.consumption.map(i => ({
+            nome: i.productName,
+            quantidade: i.quantity,
+            preco: i.price,
+            descricao: i.description
+          })),
+          total: totalWithFee,
+          subtotal: subtotal,
+          serviceFee: serviceFeeValue,
+          serviceFeePercentage: serviceFeePercentage,
+          totalWithFee: totalWithFee,
+          descricao: 'Fechamento de Conta'
+        };
+
+        toast.info(`Imprimindo conta da mesa ${table.id} automaticamente...`, { icon: '🖨️' });
+
+        const success = await printViaWebBluetooth(billData, settings.restaurantName);
+        if (!success) {
+          console.warn(`[AutoPrint] Falha ao imprimir conta da Mesa ${table.id}.`);
+        }
+      } else if (!isBillRequested && alreadyPrinted) {
+        // Se a mesa não está mais pedindo conta (ex: pagou/fechou), removemos do set para permitir nova impressão futura se reabrirem
+        printedBillsRef.current.delete(table.id);
+      }
+    });
+
+  }, [tables, settings.autoPrintEnabled, settings.restaurantName, settings.serviceFee]);
 
   // Update tables when settings change
   useEffect(() => {
