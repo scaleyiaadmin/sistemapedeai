@@ -573,7 +573,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const adminLogin = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
       const { data, error } = await supabase
-        .from('Admin_acessos' as any)
+        .from('admin_acessos' as any)
         .select('*')
         .eq('email', email.trim())
         .maybeSingle();
@@ -581,6 +581,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const adminData = data as any;
 
       if (error || !adminData) {
+        console.error('Admin login error:', error);
         return { success: false, error: 'Credenciais de administrador inválidas' };
       }
 

@@ -9,8 +9,8 @@ import SettingsModal from './SettingsModal';
 import PasswordModal from './PasswordModal';
 
 interface TopbarProps {
-  activeView: 'dashboard' | 'operation' | 'conversations';
-  onViewChange: (view: 'dashboard' | 'operation' | 'conversations') => void;
+  activeView: 'dashboard' | 'operation' | 'conversations' | 'analytics';
+  onViewChange: (view: 'dashboard' | 'operation' | 'conversations' | 'analytics') => void;
 }
 
 const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
@@ -21,16 +21,17 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
 
   // Password protection state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'dashboard' | 'conversations' | 'operation' | 'settings' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'dashboard' | 'conversations' | 'operation' | 'analytics' | 'settings' | null>(null);
   const [unlockedAreas, setUnlockedAreas] = useState<Set<string>>(new Set());
 
   const navItems = [
     { value: 'dashboard', label: 'Dashboard', protected: true },
     { value: 'operation', label: 'Operação', protected: false },
+    { value: 'analytics', label: 'Analytics', protected: true },
     { value: 'conversations', label: 'Conversas', protected: true },
   ] as const;
 
-  const handleNavClick = (value: 'dashboard' | 'operation' | 'conversations') => {
+  const handleNavClick = (value: 'dashboard' | 'operation' | 'conversations' | 'analytics') => {
     const item = navItems.find(i => i.value === value);
 
     // If it's a protected area and not unlocked, ask for password
@@ -70,6 +71,8 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
     switch (pendingAction) {
       case 'dashboard':
         return 'Acesso ao Dashboard';
+      case 'analytics':
+        return 'Acesso ao Analytics';
       case 'conversations':
         return 'Acesso às Conversas';
       case 'settings':
@@ -83,6 +86,8 @@ const Topbar: React.FC<TopbarProps> = ({ activeView, onViewChange }) => {
     switch (pendingAction) {
       case 'dashboard':
         return 'Digite a senha do restaurante para acessar o dashboard';
+      case 'analytics':
+        return 'Digite a senha do restaurante para ver analytics';
       case 'conversations':
         return 'Digite a senha do restaurante para ver as conversas';
       case 'settings':

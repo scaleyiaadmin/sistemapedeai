@@ -24,8 +24,10 @@ import {
     UserCircle,
     Edit3,
     Trash2,
-    X
+    X,
+    FileText
 } from 'lucide-react';
+import SystemLogs from '@/components/admin/SystemLogs';
 import Logo from '@/components/Logo';
 import {
     BarChart,
@@ -53,7 +55,7 @@ const AdminDashboard: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [globalSearch, setGlobalSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'logs'>('dashboard');
 
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
@@ -280,6 +282,17 @@ const AdminDashboard: React.FC = () => {
                     >
                         Restaurantes
                     </Button>
+                    <Button
+                        variant={activeTab === 'logs' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setActiveTab('logs')}
+                        className={`rounded-full px-5 h-8 text-xs font-bold transition-all ${activeTab === 'logs'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-white/50'
+                            }`}
+                    >
+                        Logs
+                    </Button>
                 </div>
 
                 {/* Right: Status, Search, Logout */}
@@ -301,104 +314,109 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 p-8 max-w-[1280px] mx-auto w-full space-y-8 overflow-y-auto">
+            <main className="flex-1 p-6 w-full space-y-6 overflow-y-auto bg-[#FAFAFA]">
                 {activeTab === 'dashboard' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
                             <div>
-                                <h1 className="text-3xl font-black text-foreground tracking-tight">Visão Geral</h1>
-                                <p className="text-muted-foreground font-medium">Controle e estatísticas da plataforma</p>
+                                <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                                <p className="text-sm text-muted-foreground">Visão geral da plataforma</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={fetchData} className="gap-2 rounded-full h-10 px-6 border-border shadow-sm hover:bg-secondary/50">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={fetchData}
+                                className="gap-2 h-9"
+                            >
                                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                                <span className="font-bold text-xs uppercase tracking-wider">Sincronizar</span>
+                                Atualizar
                             </Button>
                         </div>
 
-                        {/* Metric Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <Card className="bg-card border-border shadow-md hover:shadow-lg transition-shadow">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                        Estabelecimentos Ativos
-                                    </CardTitle>
-                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <Store className="w-5 h-5 text-primary" />
+                        {/* Simple Metric Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Estabelecimentos */}
+                            <Card className="border-none shadow-sm bg-white">
+                                <CardContent className="p-5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                            <Store className="w-5 h-5 text-emerald-600" />
+                                        </div>
+                                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">+12%</span>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-4xl font-black text-foreground">{stats.totalRestaurants}</div>
-                                    <div className="flex items-center gap-1 text-xs text-emerald-600 font-bold mt-1">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span>+2 novos este mês</span>
-                                    </div>
+                                    <div className="text-2xl font-bold text-foreground mb-1">{stats.totalRestaurants}</div>
+                                    <div className="text-xs text-muted-foreground">Estabelecimentos</div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-card border-border shadow-md hover:shadow-lg transition-shadow">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                        Usuários Totais
-                                    </CardTitle>
-                                    <div className="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
-                                        <Users className="w-5 h-5 text-info" />
+                            {/* Usuários */}
+                            <Card className="border-none shadow-sm bg-white">
+                                <CardContent className="p-5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                                            <Users className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">+8%</span>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-4xl font-black text-foreground">{stats.totalUsers}</div>
-                                    <div className="text-xs text-muted-foreground font-medium mt-1">
-                                        Sincronizado com o Supabase
-                                    </div>
+                                    <div className="text-2xl font-bold text-foreground mb-1">{stats.totalUsers}</div>
+                                    <div className="text-xs text-muted-foreground">Usuários Ativos</div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-card border-border shadow-md hover:shadow-lg transition-shadow">
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                        Média de Clientes / Loja
-                                    </CardTitle>
-                                    <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
-                                        <BarChart3 className="w-5 h-5 text-warning" />
+                            {/* Média */}
+                            <Card className="border-none shadow-sm bg-white">
+                                <CardContent className="p-5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                                            <BarChart3 className="w-5 h-5 text-purple-600" />
+                                        </div>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-4xl font-black text-foreground">
+                                    <div className="text-2xl font-bold text-foreground mb-1">
                                         {stats.totalRestaurants > 0 ? (stats.totalUsers / stats.totalRestaurants).toFixed(1) : 0}
                                     </div>
-                                    <div className="text-xs text-muted-foreground font-medium mt-1">
-                                        Engajamento médio da rede
+                                    <div className="text-xs text-muted-foreground">Média por Loja</div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Taxa de Crescimento */}
+                            <Card className="border-none shadow-sm bg-white">
+                                <CardContent className="p-5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                                            <TrendingUp className="w-5 h-5 text-orange-600" />
+                                        </div>
+                                        <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">+5%</span>
                                     </div>
+                                    <div className="text-2xl font-bold text-foreground mb-1">
+                                        {stats.totalRestaurants > 0 ? ((stats.totalUsers / stats.totalRestaurants) * 10).toFixed(0) : 0}%
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Taxa de Engajamento</div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        {/* Charts Section */}
-                        <div className="grid grid-cols-1 gap-6">
-                            <Card className="bg-card border-border shadow-sm overflow-hidden">
-                                <CardHeader className="border-b border-border/40 bg-secondary/5 px-6 py-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle className="text-base font-bold flex items-center gap-2">
-                                                <TrendingUp className="w-5 h-5 text-primary" />
-                                                Usuários por Restaurante
-                                            </CardTitle>
-                                            <CardDescription className="text-xs">Engajamento total por estabelecimento</CardDescription>
-                                        </div>
-                                        <div className="bg-white/50 p-1.5 rounded-lg border border-border/50">
-                                            <BarChart3 className="w-4 h-4 text-muted-foreground/50" />
-                                        </div>
-                                    </div>
+                        {/* Main Content Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Chart - Takes 2 columns */}
+                            <Card className="lg:col-span-2 border-none shadow-sm bg-white">
+                                <CardHeader className="border-b px-6 py-4">
+                                    <CardTitle className="text-base font-semibold">Distribuição de Usuários</CardTitle>
+                                    <CardDescription className="text-xs">Top 10 restaurantes por número de usuários</CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-6">
-                                    <div className="h-[320px] w-full">
+                                    <div className="h-[300px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                                                 <XAxis
                                                     dataKey="name"
                                                     axisLine={false}
                                                     tickLine={false}
-                                                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                                                    tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                                    angle={-45}
+                                                    textAnchor="end"
+                                                    height={80}
                                                 />
                                                 <YAxis
                                                     axisLine={false}
@@ -406,10 +424,10 @@ const AdminDashboard: React.FC = () => {
                                                     tick={{ fill: '#94a3b8', fontSize: 12 }}
                                                 />
                                                 <Tooltip
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                                    cursor={{ fill: '#f1f5f9' }}
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                                                    cursor={{ fill: '#f8f9fa' }}
                                                 />
-                                                <Bar dataKey="users" radius={[4, 4, 0, 0]}>
+                                                <Bar dataKey="users" radius={[6, 6, 0, 0]} fill="#3b82f6">
                                                     {chartData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                     ))}
@@ -419,68 +437,87 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Quick Stats - Takes 1 column */}
+                            <Card className="border-none shadow-sm bg-white">
+                                <CardHeader className="border-b px-6 py-4">
+                                    <CardTitle className="text-base font-semibold">Estatísticas Rápidas</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-4">
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-muted-foreground">Total de Mesas</span>
+                                        <span className="text-sm font-bold text-foreground">
+                                            {restaurants.reduce((acc, r) => acc + (parseInt(r.quantidade_mesas) || 0), 0)}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-muted-foreground">Média Mesas/Loja</span>
+                                        <span className="text-sm font-bold text-foreground">
+                                            {stats.totalRestaurants > 0
+                                                ? (restaurants.reduce((acc, r) => acc + (parseInt(r.quantidade_mesas) || 0), 0) / stats.totalRestaurants).toFixed(0)
+                                                : 0
+                                            }
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-muted-foreground">Novos Este Mês</span>
+                                        <span className="text-sm font-bold text-emerald-600">+2</span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                        <span className="text-sm text-muted-foreground">Status Geral</span>
+                                        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Operacional</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
 
-                        {/* Recent History Table at Dashboard */}
-                        <Card className="bg-card border-border shadow-md overflow-hidden">
-                            <CardHeader className="flex flex-row items-center justify-between px-6 py-5 border-b border-border/40">
+                        {/* Recent Activity */}
+                        <Card className="border-none shadow-sm bg-white">
+                            <CardHeader className="flex flex-row items-center justify-between px-6 py-4 border-b">
                                 <div>
-                                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                        <History className="w-5 h-5 text-primary" />
-                                        Cadastros Recentes
-                                    </CardTitle>
-                                    <CardDescription className="text-xs">Últimos estabelecimentos integrados</CardDescription>
+                                    <CardTitle className="text-base font-semibold">Cadastros Recentes</CardTitle>
+                                    <CardDescription className="text-xs">Últimos estabelecimentos adicionados</CardDescription>
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setActiveTab('restaurants')}
-                                    className="text-primary hover:bg-primary/5 rounded-full font-black text-[10px] uppercase tracking-widest px-4"
+                                    className="text-xs font-medium text-primary hover:bg-primary/5"
                                 >
                                     Ver Todos
                                     <ChevronRight className="w-3 h-3 ml-1" />
                                 </Button>
                             </CardHeader>
                             <CardContent className="p-0">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="text-[10px] text-muted-foreground uppercase bg-secondary/20 font-black tracking-widest">
-                                            <tr>
-                                                <th className="px-8 py-4">Restaurante</th>
-                                                <th className="px-8 py-4">Data de Início</th>
-                                                <th className="px-8 py-4 text-center">Status</th>
-                                                <th className="px-8 py-4 text-right">Ação</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border/50">
-                                            {restaurants.slice(0, 5).map((res) => (
-                                                <tr key={res.id} className="hover:bg-secondary/5 transition-colors group">
-                                                    <td className="px-8 py-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
-                                                                {res.nome?.charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <span className="font-bold text-foreground">{res.nome}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-5 text-muted-foreground font-medium">{new Date(res.created_at).toLocaleDateString()}</td>
-                                                    <td className="px-8 py-5 text-center">
-                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100/50 text-emerald-700 border border-emerald-200/50">
-                                                            Ativo
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-8 py-5 text-right">
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:text-primary hover:bg-primary/5">
-                                                            <ChevronRight className="w-4 h-4" />
-                                                        </Button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="divide-y">
+                                    {restaurants.slice(0, 5).map((res) => (
+                                        <div key={res.id} className="px-6 py-4 hover:bg-secondary/5 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                                                        {res.nome?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-foreground">{res.nome}</p>
+                                                        <p className="text-xs text-muted-foreground">{res.email}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs text-muted-foreground">{new Date(res.created_at).toLocaleDateString('pt-BR')}</p>
+                                                    <p className="text-xs font-medium text-foreground">{res.quantidade_mesas} mesas</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </CardContent>
                         </Card>
+                    </div>
+                )}
+
+                {activeTab === 'logs' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <SystemLogs />
                     </div>
                 )}
 
