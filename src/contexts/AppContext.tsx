@@ -144,7 +144,7 @@ interface AppContextType {
   deliverOrder: (orderId: string) => void;
   reprintOrder: (orderId: string) => void;
   updateTableAlert: (tableId: number, alert: 'waiter' | 'bill' | null) => void;
-  closeTable: (tableId: number) => void;
+  closeTable: (tableId: number) => Promise<void>;
   addItemToTable: (tableId: number, item: OrderItem) => Promise<void>;
   customers: Customer[];
   restaurant: any; // Exposed to allow access to max_mesas and other DB raw data
@@ -1007,25 +1007,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     ));
   }, [tables]);
 
-  const closeTable = useCallback((tableId: number) => {
+  const closeTable = useCallback(async (tableId: number) => {
     const table = tables.find(t => t.id === tableId);
     if (table) {
       setUndoAction({ type: 'close_table', data: table, timestamp: Date.now() });
+
+      // Mudar status para 'fechado' em vez de deletar para manter histórico.
+      if (restaurantId) {
+        // FIRST update the database to 'fechado' status
+        await updateTablePedidosStatus(tableId, 'fechado');
+        // THEN refetch to ensure the local state is in sync with DB
+        await refetchPedidos({ silent: true });
+      }
+
+      // FINALLY update local state (this will be overridden by the useEffect that syncs with pedidos)
+      // But we do it anyway for immediate UI feedback
       setTables(prev => prev.map(t =>
         t.id === tableId
           ? { ...t, status: 'free', alert: null, orders: [], consumption: [] }
           : t
       ));
       setOrders(prev => prev.filter(o => o.tableId !== tableId));
-
-      // Mudar status para 'fechado' em vez de deletar para manter histórico.
-      if (restaurantId) {
-        // Await the update to ensure DB is in sync before local state clearing might be reverted by realtime
-        updateTablePedidosStatus(tableId, 'fechado').then(() => {
-          // Refetch to confirm
-          refetchPedidos({ silent: true });
-        });
-      }
     }
   }, [tables, restaurantId, updateTablePedidosStatus, refetchPedidos]);
 
