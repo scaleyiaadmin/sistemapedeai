@@ -9,6 +9,7 @@ import { validateLoginInput } from '@/lib/auth-validation';
 import { toast } from 'sonner';
 import { printOrder } from '@/lib/print-utils';
 import { printViaWebBluetooth } from '@/services/printerService';
+import { isSystemMarkerItem } from '@/lib/utils';
 
 export interface Product {
   id: string;
@@ -309,7 +310,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Convert active pedidos to orders format for compatibility
   useEffect(() => {
+    // CRITICAL: Only consider pedidos that are NOT 'fechado' (closed)
     const activePedidos = pedidos.filter(p => p.status !== 'fechado');
+
+    console.log('[Table Sync] Total pedidos:', pedidos.length, 'Active (non-fechado):', activePedidos.length);
+
     const convertedOrders: Order[] = activePedidos.map(p => ({
       id: p.id.toString(),
       tableId: p.mesa,
@@ -334,6 +339,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const mesasComPedidos = new Set(activePedidos.map(p => p.mesa));
     const mesasComContaPedida = new Set(activePedidos.filter(p => p.status === 'pagamento_pendente').map(p => p.mesa));
 
+    console.log('[Table Sync] Mesas com pedidos ativos:', Array.from(mesasComPedidos));
+    console.log('[Table Sync] Mesas com conta pedida:', Array.from(mesasComContaPedida));
+
     // Also sync table consumption from DB active pedidos (source of truth).
     const consumoPorMesa = new Map<number, OrderItem[]>();
     for (const pedido of activePedidos) {
@@ -351,7 +359,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTables(prev =>
       prev.map(t => {
         const consumo = consumoPorMesa.get(t.id) ?? [];
-        const shouldBeOccupied = mesasComPedidos.has(t.id) || consumo.length > 0;
+        // CRITICAL FIX: Only mark as occupied if there are ACTIVE (non-fechado) pedidos
+        const shouldBeOccupied = mesasComPedidos.has(t.id);
         const hasBillRequested = mesasComContaPedida.has(t.id);
 
         // Check for waiter call in active pedidos (using status 'garcom_chamado' or 'garçom_chamado')
@@ -360,10 +369,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           (p.status === 'garcom_chamado' || p.status === 'garçom_chamado')
         );
 
+        const newStatus = shouldBeOccupied ? 'occupied' : 'free';
+        const newAlert = hasWaiterCall ? 'waiter' : (hasBillRequested ? 'bill' : null);
+
+        // Log changes for debugging
+        if (t.status !== newStatus || t.alert !== newAlert) {
+          console.log(`[Table Sync] Mesa ${t.id}: status ${t.status} -> ${newStatus}, alert ${t.alert} -> ${newAlert}`);
+        }
+
         return {
           ...t,
-          status: shouldBeOccupied ? 'occupied' : 'free',
-          alert: hasWaiterCall ? 'waiter' : (hasBillRequested ? 'bill' : t.alert === 'bill' ? null : t.alert),
+          status: newStatus,
+          alert: newAlert,
           consumption: consumo,
         };
       })
@@ -396,12 +413,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const notPrintedYet = !printedOrdersRef.current.has(p.id);
 
       // Filtra pedidos que são apenas marcadores de abertura de mesa
-      const isNotOnlyAtendimento = !p.itens.every(item =>
-        item.nome.includes('Atendimento Iniciado') ||
-        item.nome.includes('Mesa aberta')
+      const isNotOnlySystemMarker = !p.itens.every(item =>
+        isSystemMarkerItem(item.nome)
       );
 
-      return isPending && notPrintedYet && isNotOnlyAtendimento;
+      return isPending && notPrintedYet && isNotOnlySystemMarker;
     });
 
     if (newPendingOrders.length > 0) {
@@ -1010,14 +1026,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const closeTable = useCallback(async (tableId: number) => {
     const table = tables.find(t => t.id === tableId);
     if (table) {
+      console.log(`[Close Table] Iniciando fechamento da mesa ${tableId}`);
       setUndoAction({ type: 'close_table', data: table, timestamp: Date.now() });
 
       // Mudar status para 'fechado' em vez de deletar para manter histórico.
       if (restaurantId) {
+        console.log(`[Close Table] Atualizando pedidos da mesa ${tableId} para status 'fechado'`);
         // FIRST update the database to 'fechado' status
         await updateTablePedidosStatus(tableId, 'fechado');
+        console.log(`[Close Table] Pedidos atualizados, refazendo fetch...`);
         // THEN refetch to ensure the local state is in sync with DB
         await refetchPedidos({ silent: true });
+        console.log(`[Close Table] Fetch completo para mesa ${tableId}`);
       }
 
       // FINALLY update local state (this will be overridden by the useEffect that syncs with pedidos)
@@ -1028,6 +1048,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           : t
       ));
       setOrders(prev => prev.filter(o => o.tableId !== tableId));
+      console.log(`[Close Table] Mesa ${tableId} liberada localmente`);
     }
   }, [tables, restaurantId, updateTablePedidosStatus, refetchPedidos]);
 

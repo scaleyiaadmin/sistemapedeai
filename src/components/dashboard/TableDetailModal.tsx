@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { filterSystemItems } from '@/lib/utils';
 
 interface TableDetailModalProps {
   table: Table;
@@ -33,7 +34,8 @@ const TableDetailModal: React.FC<TableDetailModalProps> = ({ table, onClose }) =
 
   // Get fresh table data
   const currentTable = tables.find(t => t.id === table.id) || table;
-  const consumption = currentTable.consumption || [];
+  // Filter out system marker items (like "Atendimento Iniciado")
+  const consumption = filterSystemItems(currentTable.consumption || []);
   const subtotal = consumption.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const serviceFee = settings.serviceFee > 0 ? subtotal * (settings.serviceFee / 100) : 0;
   const total = subtotal + serviceFee;
@@ -81,6 +83,11 @@ const TableDetailModal: React.FC<TableDetailModalProps> = ({ table, onClose }) =
   const startEditItem = (index: number, currentQuantity: number) => {
     setEditingItem(index);
     setEditQuantity(currentQuantity);
+  };
+
+  const cancelEdit = () => {
+    setEditingItem(null);
+    setEditQuantity(1);
   };
 
   const handleSaveEdit = (originalItem: OrderItem, newQuantity: number) => {

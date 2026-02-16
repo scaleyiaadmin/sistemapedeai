@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
 } from '@/components/ui/alert-dialog';
+import { isSystemMarkerItem } from '@/lib/utils';
 
 const OrderQueue: React.FC = () => {
   const { pedidos, updatePedidoStatus, deletePedido, loadingPedidos: loading, reprintOrder } = useApp();
@@ -15,7 +16,7 @@ const OrderQueue: React.FC = () => {
   // Filter pedidos based on status (pending only) and exclude system items
   const pendingPedidos = pedidos.filter(p =>
     (p.status === 'pendente' || p.status === 'preparando') &&
-    !p.itens.some(item => item.nome === 'Atendimento Iniciado')
+    !p.itens.some(item => isSystemMarkerItem(item.nome))
   );
 
   const handleDeliver = async (pedidoId: number) => {
