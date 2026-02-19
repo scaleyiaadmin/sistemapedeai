@@ -1025,15 +1025,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [pedidos, settings.restaurantName]);
 
-  const updateTableAlert = useCallback((tableId: number, alert: 'waiter' | 'bill' | null) => {
+  const updateTableAlert = useCallback(async (tableId: number, alert: 'waiter' | 'bill' | null) => {
     const table = tables.find(t => t.id === tableId);
+
+    // Logic for RESOLVING an alert (alert === null) and table has an active alert
     if (table && table.alert && alert === null) {
       setUndoAction({ type: 'resolve_alert', data: { tableId, previousAlert: table.alert }, timestamp: Date.now() });
+
+      if (restaurantId) {
+        if (table.alert === 'waiter') {
+          // Resolve Waiter Call: Revert 'garcom_pendente' to 'entregue'
+          console.log(`[Resolve Alert] Resolvendo chamado de garçom da mesa ${tableId}`);
+          const { error } = await supabase
+            .from('Pedidos')
+            .update({ status: 'entregue' }) // Assume processed/delivered
+            .eq('restaurante_id', restaurantId)
+            .eq('mesa', tableId.toString())
+            .eq('status', 'garcom_pendente');
+
+          if (error) {
+            console.error('Error resolving waiter call:', error);
+            toast.error('Erro ao atualizar status do pedido no banco.');
+          } else {
+            toast.success('Chamado de garçom resolvido!');
+            // Force refetch to update UI
+            refetchPedidos({ silent: true });
+          }
+        } else if (table.alert === 'bill') {
+          // Resolve Bill: Close Table
+          console.log(`[Resolve Alert] Resolvendo pedido de conta da mesa ${tableId} -> Fechando mesa.`);
+          await closeTable(tableId);
+          return; // closeTable already updates local state
+        }
+      }
     }
+
     setTables(prev => prev.map(t =>
       t.id === tableId ? { ...t, alert } : t
     ));
-  }, [tables]);
+  }, [tables, restaurantId, refetchPedidos, closeTable]);
 
   const closeTable = useCallback(async (tableId: number) => {
     const table = tables.find(t => t.id === tableId);
