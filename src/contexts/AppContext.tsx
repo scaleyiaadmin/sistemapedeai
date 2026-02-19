@@ -363,10 +363,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const shouldBeOccupied = mesasComPedidos.has(t.id);
         const hasBillRequested = mesasComContaPedida.has(t.id);
 
-        // Check for waiter call in active pedidos (using status 'garcom_chamado' or 'garçom_chamado')
+        // Check for waiter call in active pedidos (using status 'garcom_pendente')
         const hasWaiterCall = activePedidos.some(p =>
           p.mesa === t.id &&
-          (p.status === 'garcom_chamado' || p.status === 'garçom_chamado')
+          (p.status === 'garcom_pendente')
         );
 
         const newStatus = shouldBeOccupied ? 'occupied' : 'free';
@@ -942,41 +942,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       // --- AUTO PRINT BILL LOGIC ---
       if (table.consumption && table.consumption.length > 0) {
-        // Calculate totals
-        const subtotal = table.consumption.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        const serviceFeePercentage = settings.serviceFee || 0;
-        const serviceFeeValue = (subtotal * serviceFeePercentage) / 100;
-        const totalWithFee = subtotal + serviceFeeValue;
 
-        // Prepare print data
-        const billData: any = {
-          id: `F${tableId}-${new Date().getHours()}${new Date().getMinutes()}`,
-          mesa: tableId,
-          created_at: new Date(),
-          itens: table.consumption.map(i => ({
-            nome: i.productName,
-            quantidade: i.quantity,
-            preco: i.price,
-            descricao: i.description // Pass entry description if exists
-          })),
-          total: totalWithFee, // Default for backward compat if needed, but we use fields below
-          subtotal: subtotal,
-          serviceFee: serviceFeeValue,
-          serviceFeePercentage: serviceFeePercentage,
-          totalWithFee: totalWithFee,
-          descricao: 'Fechamento de Conta'
-        };
+        // CRITICAL DEEP COPY & FILTER: Filter out system items (like "Atendimento Iniciado")
+        // We use isSystemMarkerItem from utils
+        const consumptionToPrint = table.consumption.filter(item =>
+          !isSystemMarkerItem(item.productName)
+        );
 
-        toast.info(`Imprimindo conta da mesa ${tableId}...`, {
-          icon: '🖨️',
-        });
+        if (consumptionToPrint.length === 0) {
+          console.log('[RequestBill] Skipping print: only system items found.');
+          toast.info(`Solicitação enviada (Mesa ${tableId}: apenas itens de sistema).`);
+        } else {
+          // Calculate totals based on FILTERED items
+          const subtotal = consumptionToPrint.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+          const serviceFeePercentage = settings.serviceFee || 0;
+          const serviceFeeValue = (subtotal * serviceFeePercentage) / 100;
+          const totalWithFee = subtotal + serviceFeeValue;
 
-        // Fire and forget print (don't block UI)
-        printViaWebBluetooth(billData, settings.restaurantName).then(success => {
-          if (!success) {
-            console.warn('Falha na impressão automática da conta. Verifique a conexão.');
-          }
-        });
+          // Prepare print data
+          const billData: any = {
+            id: `F${tableId}-${new Date().getHours()}${new Date().getMinutes()}`,
+            mesa: tableId,
+            created_at: new Date(),
+            itens: consumptionToPrint.map(i => ({
+              nome: i.productName,
+              quantidade: i.quantity,
+              preco: i.price,
+              descricao: i.description // Pass entry description if exists
+            })),
+            total: totalWithFee,
+            subtotal: subtotal,
+            serviceFee: serviceFeeValue,
+            serviceFeePercentage: serviceFeePercentage,
+            totalWithFee: totalWithFee,
+            descricao: 'Fechamento de Conta'
+          };
+
+          toast.info(`Imprimindo conta da mesa ${tableId}...`, {
+            icon: '🖨️',
+          });
+
+          // Fire and forget print (don't block UI)
+          printViaWebBluetooth(billData, settings.restaurantName).then(success => {
+            if (!success) {
+              console.warn('Falha na impressão automática da conta. Verifique a conexão.');
+            }
+          });
+        }
       } else {
         toast.info(`Solicitação enviada (Mesa ${tableId} sem consumo registrado).`);
       }
@@ -988,7 +1000,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Error requesting bill:', err);
       toast.error('Erro ao solicitar conta');
     }
-  }, [restaurantId, tables, settings.restaurantName, refetchPedidos]);
+  }, [restaurantId, tables, settings.restaurantName, settings.serviceFee, refetchPedidos]);
 
   const deliverOrder = useCallback((orderId: string) => {
     const order = orders.find(o => o.id === orderId);
