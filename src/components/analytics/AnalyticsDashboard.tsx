@@ -29,9 +29,9 @@ const AnalyticsDashboard: React.FC = () => {
     // Dados para exportação
     const exportData = useMemo(() => {
         const orders = pedidos.map(p => ({
-            id: p.id,
+            id: String(p.id),
             date: new Date(p.created_at).toLocaleString('pt-BR'),
-            table: p.mesa_id || 0,
+            table: Number(p.mesa) || 0,
             items: p.itens?.map((i: any) => `${i.quantidade}x ${i.nome}`).join(', ') || '',
             total: p.itens?.reduce((sum: number, i: any) => sum + (i.preco * i.quantidade), 0) || 0,
         }));

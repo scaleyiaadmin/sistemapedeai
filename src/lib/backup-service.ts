@@ -28,10 +28,10 @@ class BackupService {
         try {
             // Buscar todos os dados
             const [pedidos, produtos, clientes, configuracoes] = await Promise.all([
-                supabase.from('pedidos').select('*').eq('restaurant_id', restaurantId),
-                supabase.from('produtos').select('*').eq('restaurant_id', restaurantId),
-                supabase.from('clientes').select('*').eq('restaurant_id', restaurantId),
-                supabase.from('restaurantes').select('*').eq('id', restaurantId).single(),
+                supabase.from('Pedidos' as any).select('*').eq('restaurante_id', restaurantId),
+                supabase.from('Produtos' as any).select('*').eq('restaurante_id', restaurantId),
+                (supabase as any).from('clientes').select('*').eq('restaurant_id', restaurantId),
+                supabase.from('Restaurantes' as any).select('*').eq('id', restaurantId).single(),
             ]);
 
             const backup: BackupData = {
@@ -96,29 +96,28 @@ class BackupService {
      */
     async restoreBackup(backup: BackupData, restaurantId: string): Promise<void> {
         try {
-            // ATENÇÃO: Esta operação é destrutiva!
-            // Em produção, considere fazer uma confirmação adicional
+            const sb = supabase as any;
 
             // Restaurar produtos
             if (backup.data.produtos.length > 0) {
-                await supabase.from('produtos').delete().eq('restaurant_id', restaurantId);
-                await supabase.from('produtos').insert(
-                    backup.data.produtos.map(p => ({ ...p, restaurant_id: restaurantId }))
+                await sb.from('Produtos').delete().eq('restaurante_id', restaurantId);
+                await sb.from('Produtos').insert(
+                    backup.data.produtos.map((p: any) => ({ ...p, restaurante_id: restaurantId }))
                 );
             }
 
             // Restaurar clientes
             if (backup.data.clientes.length > 0) {
-                await supabase.from('clientes').delete().eq('restaurant_id', restaurantId);
-                await supabase.from('clientes').insert(
-                    backup.data.clientes.map(c => ({ ...c, restaurant_id: restaurantId }))
+                await sb.from('clientes').delete().eq('restaurant_id', restaurantId);
+                await sb.from('clientes').insert(
+                    backup.data.clientes.map((c: any) => ({ ...c, restaurant_id: restaurantId }))
                 );
             }
 
             // Restaurar configurações
             if (backup.data.configuracoes) {
-                await supabase
-                    .from('restaurantes')
+                await sb
+                    .from('Restaurantes')
                     .update(backup.data.configuracoes)
                     .eq('id', restaurantId);
             }
