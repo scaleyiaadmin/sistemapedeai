@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_acessos: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: number
+          senha: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: number
+          senha?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: number
+          senha?: string | null
+        }
+        Relationships: []
+      }
+      estoque_restaurantes: {
+        Row: {
+          created_at: string
+          id: number
+          produto_id: number
+          quantidade_atual: string | null
+          restaurante_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          produto_id: number
+          quantidade_atual?: string | null
+          restaurante_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          produto_id?: number
+          quantidade_atual?: string | null
+          restaurante_id?: string
+        }
+        Relationships: []
+      }
       Pedidos: {
         Row: {
           created_at: string
@@ -60,21 +105,39 @@ export type Database = {
       }
       Produtos: {
         Row: {
+          ativo: boolean | null
+          categoria: string | null
           created_at: string
+          descricao: string | null
+          estacao: string | null
+          estoque: number | null
+          estoque_minimo: number | null
           id: number
           nome: string | null
           preco: string | null
           restaurante_id: string | null
         }
         Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
           created_at?: string
+          descricao?: string | null
+          estacao?: string | null
+          estoque?: number | null
+          estoque_minimo?: number | null
           id?: number
           nome?: string | null
           preco?: string | null
           restaurante_id?: string | null
         }
         Update: {
+          ativo?: boolean | null
+          categoria?: string | null
           created_at?: string
+          descricao?: string | null
+          estacao?: string | null
+          estoque?: number | null
+          estoque_minimo?: number | null
           id?: number
           nome?: string | null
           preco?: string | null
@@ -92,37 +155,97 @@ export type Database = {
       }
       Restaurantes: {
         Row: {
+          alerta_estoque_baixo: number | null
+          alerta_estoque_critico: number | null
+          alertas_piscantes: boolean | null
           created_at: string
           email: string | null
+          fechar_mesa_auto: boolean | null
+          horario_abertura: string | null
           horario_fecha_cozinha: string | null
+          horario_fechamento: string | null
           id: string
+          impressao_auto: boolean | null
           nome: string | null
           quantidade_max_mesas: string | null
           quantidade_mesas: string | null
           senha: string | null
+          sons_habilitados: boolean | null
           telefone: string | null
         }
         Insert: {
+          alerta_estoque_baixo?: number | null
+          alerta_estoque_critico?: number | null
+          alertas_piscantes?: boolean | null
           created_at?: string
           email?: string | null
+          fechar_mesa_auto?: boolean | null
+          horario_abertura?: string | null
           horario_fecha_cozinha?: string | null
+          horario_fechamento?: string | null
           id?: string
+          impressao_auto?: boolean | null
           nome?: string | null
           quantidade_max_mesas?: string | null
           quantidade_mesas?: string | null
           senha?: string | null
+          sons_habilitados?: boolean | null
           telefone?: string | null
         }
         Update: {
+          alerta_estoque_baixo?: number | null
+          alerta_estoque_critico?: number | null
+          alertas_piscantes?: boolean | null
           created_at?: string
           email?: string | null
+          fechar_mesa_auto?: boolean | null
+          horario_abertura?: string | null
           horario_fecha_cozinha?: string | null
+          horario_fechamento?: string | null
           id?: string
+          impressao_auto?: boolean | null
           nome?: string | null
           quantidade_max_mesas?: string | null
           quantidade_mesas?: string | null
           senha?: string | null
+          sons_habilitados?: boolean | null
           telefone?: string | null
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          category: string
+          created_at: string | null
+          details: Json | null
+          id: number
+          ip_address: string | null
+          level: string
+          message: string
+          restaurant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          ip_address?: string | null
+          level: string
+          message: string
+          restaurant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          ip_address?: string | null
+          level?: string
+          message?: string
+          restaurant_id?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }

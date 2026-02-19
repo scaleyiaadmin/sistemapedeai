@@ -44,7 +44,7 @@ export function useSystemLogs(options: UseSystemLogsOptions = {}) {
                 setError(fetchError.message);
                 console.error('Error fetching logs:', fetchError);
             } else {
-                setLogs(data || []);
+                setLogs((data as unknown as SystemLog[]) || []);
                 setError(null);
             }
         } catch (err) {
