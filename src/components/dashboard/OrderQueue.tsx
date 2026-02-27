@@ -63,7 +63,7 @@ const OrderQueue: React.FC = () => {
       <div className="h-full bg-card border-l border-border p-4 overflow-y-auto">
         <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-warning"></span>
-          Pedidos ({pendingPedidos.length})
+          Fila de Pedidos ({pendingPedidos.length})
         </h2>
 
         {pendingPedidos.length === 0 ? (
