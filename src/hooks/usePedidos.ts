@@ -77,11 +77,15 @@ const parsePedido = (pedido: Pedido): ParsedPedido => {
   });
 
   // Create structured items array
-  const itens = Object.entries(itemCounts).map(([nome, qtd]) => ({
-    nome,
-    quantidade: qtd,
-    preco: unitPrice // Note: This assumes all items have same unit price which is an approximation
-  }));
+  const itens = Object.entries(itemCounts).map(([nome, qtd]) => {
+    // If there's only one type of item, use the total quantity from the database
+    const finalQtd = Object.keys(itemCounts).length === 1 ? quantity : qtd;
+    return {
+      nome,
+      quantidade: finalQtd,
+      preco: unitPrice
+    };
+  });
 
   // Reconstruct a cleaner product name string for display (e.g. "2x Burger, 1x Coke")
   const displayProductName = Object.entries(itemCounts)
