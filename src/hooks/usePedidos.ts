@@ -51,11 +51,14 @@ const normalizePedidoStatus = (status: string | null | undefined): string => {
 };
 
 const parsePedido = (pedido: Pedido): ParsedPedido => {
+  // Debug log to trace data from DB
+  console.log(`[parsePedido] ID: ${pedido.id}, Itens raw: "${pedido.itens}", Qtd raw: "${pedido.quantidade}", Subtotal: "${pedido.Subtotal}"`);
+
   // Parse the product name from itens
   const productName = pedido.itens || '';
 
-  // Parse quantity
-  const quantity = parseInt(pedido.quantidade || '1', 10);
+  // Parse quantity from DB - ensure it's a number
+  const quantity = parseInt(pedido.quantidade || '1', 10) || 1;
 
   // Parse subtotal - remove "R$ " and convert comma to dot
   let total = 0;
@@ -64,7 +67,7 @@ const parsePedido = (pedido: Pedido): ParsedPedido => {
     total = parseFloat(cleanSubtotal) || 0;
   }
 
-  // Calculate unit price
+  // Calculate unit price based on DB quantity
   const unitPrice = quantity > 0 ? total / quantity : 0;
 
   // Parse items from comma-separated string (e.g. "Burger, Burger, Coke")
@@ -76,10 +79,18 @@ const parsePedido = (pedido: Pedido): ParsedPedido => {
     itemCounts[name] = (itemCounts[name] || 0) + 1;
   });
 
+  const uniqueItemNames = Object.keys(itemCounts);
+
   // Create structured items array
   const itens = Object.entries(itemCounts).map(([nome, qtd]) => {
-    // If there's only one type of item, use the total quantity from the database
-    const finalQtd = Object.keys(itemCounts).length === 1 ? quantity : qtd;
+    // CRITICAL: If there is ONLY ONE type of item in the list, 
+    // force use the quantity from the database 'quantidade' column.
+    // This handles cases where the integration sends "Mini Pastel" and Qty: 7
+    let finalQtd = qtd;
+    if (uniqueItemNames.length === 1 && quantity > 1) {
+      finalQtd = quantity;
+    }
+
     return {
       nome,
       quantidade: finalQtd,
@@ -87,10 +98,7 @@ const parsePedido = (pedido: Pedido): ParsedPedido => {
     };
   });
 
-  // Reconstruct a cleaner product name string for display (e.g. "2x Burger, 1x Coke")
-  const displayProductName = Object.entries(itemCounts)
-    .map(([nome, qtd]) => qtd > 1 ? `${qtd}x ${nome}` : nome)
-    .join(', ');
+  console.log(`[parsePedido] Result for ID ${pedido.id}:`, { quantity, total, unitPrice, itens });
 
   return {
     id: pedido.id,
